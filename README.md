@@ -49,7 +49,7 @@ A modern, native, and blazing-fast desktop application to manage your Docker env
 
 ## 📦 Building for Production
 
-To create a standalone application installer (e.g., `.deb` for Linux, `.exe` for Windows, `.dmg` for macOS):
+To create a standalone application installer:
 
 ```bash
 pnpm tauri build
