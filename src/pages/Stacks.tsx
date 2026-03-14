@@ -256,8 +256,8 @@ const Stacks = () => {
       </div>
 
       <Sheet open={!!selectedStack} onOpenChange={(open) => !open && setSelectedStack(null)}>
-        <SheetContent side="right" className="w-[600px] sm:w-[800px] bg-background border-border text-foreground">
-          <SheetHeader>
+        <SheetContent side="right" className="w-[80%] sm:w-[80%] sm:max-w-none bg-background border-border text-foreground flex flex-col p-0 gap-0">
+          <SheetHeader className="p-5 border-b border-border shrink-0 text-left">
             <SheetTitle className="text-foreground flex items-center gap-2">
               <Layers className="w-5 h-5 text-indigo-500" />
               Stack: {selectedStack?.name}
@@ -267,7 +267,7 @@ const Stacks = () => {
             </SheetDescription>
           </SheetHeader>
           
-          <div className="mt-8 space-y-6">
+          <div className="flex-1 overflow-auto p-8 space-y-6">
             <div className="rounded-lg border border-border bg-card/50 p-4">
               <h3 className="text-sm font-semibold text-foreground mb-4 flex items-center gap-2">
                 <Activity className="w-4 h-4" />

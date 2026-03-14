@@ -49,7 +49,9 @@ import {
   CheckSquare,
   MoreVertical,
   Copy,
-  X
+  X,
+  Download,
+  Clipboard,
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -60,6 +62,14 @@ import {
   SheetTitle,
   SheetDescription
 } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { showSuccess, showError } from "@/utils/toast";
 import {
   Dialog,
@@ -87,6 +97,14 @@ const Containers = () => {
   const [logs, setLogs] = useState("");
   const [showTerminal, setShowTerminal] = useState(false);
   const [inspectData, setInspectData] = useState("");
+
+  // Log specific states
+  const [autoRefreshLogs, setAutoRefreshLogs] = useState(false);
+  const [wrapLines, setWrapLines] = useState(true);
+  const [showTimestamps, setShowTimestamps] = useState(false);
+  const [logTimeFilter, setLogTimeFilter] = useState("all"); // e.g., "all", "lastDay", "last4Hours", "lastHour", "last10Minutes"
+  const [logSearchTerm, setLogSearchTerm] = useState("");
+  const [logLineCount, setLogLineCount] = useState(1000); // 0 for all lines
   const [terminalShell, setTerminalShell] = useState<"sh" | "bash" | "ash">("sh");
   const [terminalUser, setTerminalUser] = useState("");
   const [terminalKey, setTerminalKey] = useState(0);
@@ -98,6 +116,9 @@ const Containers = () => {
   const [newEnvs, setNewEnvs] = useState("");
   const [newVolumes, setNewVolumes] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+
+  // Key to force log re-fetch when options change
+  const [logsRefreshKey, setLogsRefreshKey] = useState(0);
 
   const refreshContainers = useCallback(async (manual = false) => {
     if (manual) setIsRefreshing(true);
@@ -130,18 +151,79 @@ const Containers = () => {
     }
   };
 
-  const openLogs = async (container: Container) => {
+  const fetchLogs = useCallback(async (silent = false) => {
+    if (!selectedContainer) return;
+
+    if (!silent) setLogs("Loading logs...");
+    let sinceTimestamp: number | null = null;
+    const now = Math.floor(Date.now() / 1000); // Unix timestamp in seconds
+
+    switch (logTimeFilter) {
+      case "lastDay":
+        sinceTimestamp = now - 24 * 60 * 60;
+        break;
+      case "last4Hours":
+        sinceTimestamp = now - 4 * 60 * 60;
+        break;
+      case "lastHour":
+        sinceTimestamp = now - 60 * 60;
+        break;
+      case "last10Minutes":
+        sinceTimestamp = now - 10 * 60;
+        break;
+      case "all":
+      default:
+        sinceTimestamp = null;
+        break;
+    }
+
+    try {
+      const logData = await getContainerLogs(
+        selectedContainer.id,
+        showTimestamps,
+        logLineCount === 0 ? null : logLineCount,
+        sinceTimestamp
+      );
+      setLogs(logData || "");
+    } catch (err) {
+      setLogs(`Error loading logs: ${err}`);
+    }
+  }, [selectedContainer, showTimestamps, logLineCount, logTimeFilter]);
+
+  const getVisibleLogs = useCallback(() => {
+    if (!logSearchTerm) return logs;
+    return logs.split('\n')
+      .filter(line => line.toLowerCase().includes(logSearchTerm.toLowerCase()))
+      .join('\n');
+  }, [logs, logSearchTerm]);
+
+  const openLogs = useCallback((container: Container) => {
     setSelectedContainer(container);
     setLogs("Loading logs...");
     setInspectData("");
     setShowTerminal(false);
-    try {
-      const logData = await getContainerLogs(container.id);
-      setLogs(logData || "No logs available.");
-    } catch (err) {
-      setLogs("Error loading logs.");
+    setLogsRefreshKey((prev) => prev + 1); // Trigger log re-fetch
+  }, []);
+
+  // Effect for fetching logs initially and on option changes
+  useEffect(() => {
+    if (selectedContainer && !showTerminal) {
+      // If we're already loading or have content, fetch silently to avoid flickering settings
+      const isInitial = logs === "Loading logs..." || logs === "";
+      fetchLogs(!isInitial);
     }
-  };
+  }, [fetchLogs, logsRefreshKey, selectedContainer, showTerminal]);
+
+  // Effect for auto-refreshing logs
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+    if (autoRefreshLogs && selectedContainer && !showTerminal) {
+      intervalId = setInterval(() => fetchLogs(true), 3000); // Refresh every 3 seconds silently
+    }
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [autoRefreshLogs, selectedContainer, fetchLogs, showTerminal]);
 
   const openTerminal = (container: Container) => {
     setSelectedContainer(container);
@@ -439,9 +521,118 @@ const Containers = () => {
                   />
                 </div>
               </div>
+            ) : logs ? (
+              <div className="flex flex-col h-full">
+                {/* Log Controls */}
+                <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-border mb-3">
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="auto-refresh-logs"
+                      checked={autoRefreshLogs}
+                      onCheckedChange={setAutoRefreshLogs}
+                    />
+                    <Label htmlFor="auto-refresh-logs" className="text-xs">Auto-refresh</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="wrap-lines"
+                      checked={wrapLines}
+                      onCheckedChange={setWrapLines}
+                    />
+                    <Label htmlFor="wrap-lines" className="text-xs">Wrap lines</Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="show-timestamps"
+                      checked={showTimestamps}
+                      onCheckedChange={setShowTimestamps}
+                    />
+                    <Label htmlFor="show-timestamps" className="text-xs">Timestamps</Label>
+                  </div>
+
+                  <Select value={logTimeFilter} onValueChange={setLogTimeFilter}>
+                    <SelectTrigger className="h-8 w-[140px] text-xs">
+                      <SelectValue placeholder="Fetch" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      <SelectItem value="all">All logs</SelectItem>
+                      <SelectItem value="lastDay">Last day</SelectItem>
+                      <SelectItem value="last4Hours">Last 4 hours</SelectItem>
+                      <SelectItem value="lastHour">Last hour</SelectItem>
+                      <SelectItem value="last10Minutes">Last 10 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  <Input
+                    placeholder="Search logs..."
+                    className="h-8 w-[180px] text-xs bg-muted border-border"
+                    value={logSearchTerm}
+                    onChange={(e) => setLogSearchTerm(e.target.value)}
+                  />
+
+                  <Input
+                    type="number"
+                    placeholder="Lines"
+                    className="h-8 w-[80px] text-xs bg-muted border-border"
+                    value={logLineCount === 0 ? "" : logLineCount}
+                    onChange={(e) => {
+                      const val = parseInt(e.target.value);
+                      setLogLineCount(isNaN(val) ? 0 : val);
+                    }}
+                  />
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1"
+                    onClick={() => setLogsRefreshKey(k => k + 1)}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1"
+                    onClick={() => {
+                      if (!selectedContainer) return;
+                      const visibleLogs = getVisibleLogs();
+                      const element = document.createElement("a");
+                      const file = new Blob([visibleLogs], { type: 'text/plain' });
+                      element.href = URL.createObjectURL(file);
+                      element.download = `${selectedContainer.name}-logs.txt`;
+                      document.body.appendChild(element);
+                      element.click();
+                      document.body.removeChild(element);
+                    }}
+                  >
+                    <Download className="h-3.5 w-3.5" /> Download
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs gap-1"
+                    onClick={() => {
+                      const visibleLogs = getVisibleLogs();
+                      navigator.clipboard.writeText(visibleLogs);
+                      showSuccess("Logs copied to clipboard");
+                    }}
+                  >
+                    <Clipboard className="h-3.5 w-3.5" /> Copy
+                  </Button>
+                </div>
+
+                {/* Logs Display */}
+                <div className={cn(
+                  "bg-card rounded-lg p-4 font-mono text-xs overflow-auto border border-border h-full",
+                  wrapLines ? "whitespace-pre-wrap" : "whitespace-pre"
+                )}>
+                  {getVisibleLogs() || (logs === "Loading logs..." ? "Loading logs..." : "No logs available.")}
+                </div>
+              </div>
             ) : (
               <div className="bg-card rounded-lg p-4 font-mono text-xs overflow-auto whitespace-pre-wrap border border-border h-full">
-                {logs || inspectData}
+                {inspectData}
               </div>
             )}
           </div>
@@ -531,7 +722,7 @@ interface ContainerRowProps {
   onSelect: () => void;
   handleAction: (action: (id: string) => Promise<unknown>, id: string, name: string) => Promise<void>;
   handleDuplicate: (container: Container) => Promise<void>;
-  openLogs: (container: Container) => Promise<void>;
+  openLogs: (container: Container) => void;
   openTerminal: (container: Container) => void;
   openInspect: (container: Container) => Promise<void>;
 }

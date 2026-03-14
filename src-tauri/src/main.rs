@@ -323,24 +323,32 @@ async fn create_network(name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn get_container_logs(id: String) -> Result<String, String> {
+async fn get_container_logs(
+    id: String,
+    timestamps: bool,
+    tail: Option<usize>,
+    since: Option<u64>, // Unix timestamp in seconds
+) -> Result<String, String> {
     let docker = Docker::connect_with_local_defaults().map_err(|e| e.to_string())?;
-    let mut logs = docker.logs(&id, Some(LogsOptions::<String> {
+
+    let logs_options = LogsOptions {
+        follow: false,
         stdout: true,
         stderr: true,
-        timestamps: true,
-        tail: "100".to_string(),
+        timestamps: timestamps,
+        tail: tail.map(|t| t.to_string()).unwrap_or_else(|| "all".to_string()),
+        since: since.map(|s| s as i64).unwrap_or(0),
         ..Default::default()
-    }));
+    };
 
-    let mut output = String::new();
-    while let Some(log) = logs.next().await {
-        match log {
-            Ok(log) => output.push_str(&log.to_string()),
-            Err(e) => return Err(e.to_string()),
-        }
+    let mut logs_stream = docker.logs(&id, Some(logs_options));
+    let mut logs_output = String::new();
+
+    while let Some(log) = logs_stream.next().await {
+        logs_output.push_str(&format!("{}", log.map_err(|e| e.to_string())?));
     }
-    Ok(output)
+
+    Ok(logs_output)
 }
 
 #[derive(Serialize, Clone)]
@@ -430,14 +438,17 @@ async fn get_stacks() -> Result<Vec<StackInfo>, String> {
 }
 
 #[tauri::command]
-async fn deploy_stack(name: String, compose_content: String) -> Result<(), String> {
-    // Basic implementation: we'd ideally use docker-compose CLI or bollard-compose
-    // For now, we'll write to a temp file and run docker-compose up
+async fn deploy_stack(app: AppHandle, name: String, compose_content: String) -> Result<(), String> {
     use std::io::Write;
-    let mut temp_file = std::env::temp_dir();
-    temp_file.push(format!("compose-{}.yaml", name));
+    use tauri::Manager;
+
+    let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let stacks_dir = app_dir.join("stacks");
+    std::fs::create_dir_all(&stacks_dir).map_err(|e| e.to_string())?;
     
-    let mut file = std::fs::File::create(&temp_file).map_err(|e| e.to_string())?;
+    let compose_file = stacks_dir.join(format!("compose-{}.yaml", name));
+    
+    let mut file = std::fs::File::create(&compose_file).map_err(|e| e.to_string())?;
     file.write_all(compose_content.as_bytes()).map_err(|e| e.to_string())?;
 
     let output = std::process::Command::new("docker")
@@ -445,7 +456,7 @@ async fn deploy_stack(name: String, compose_content: String) -> Result<(), Strin
         .arg("-p")
         .arg(&name)
         .arg("-f")
-        .arg(&temp_file)
+        .arg(&compose_file)
         .arg("up")
         .arg("-d")
         .output()
@@ -476,11 +487,13 @@ async fn remove_stack(name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn get_stack_compose(name: String) -> Result<String, String> {
-    let mut temp_file = std::env::temp_dir();
-    temp_file.push(format!("compose-{}.yaml", name));
+async fn get_stack_compose(app: AppHandle, name: String) -> Result<String, String> {
+    use tauri::Manager;
+    let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+    let stacks_dir = app_dir.join("stacks");
+    let compose_file = stacks_dir.join(format!("compose-{}.yaml", name));
     
-    match std::fs::read_to_string(&temp_file) {
+    match std::fs::read_to_string(&compose_file) {
         Ok(content) => Ok(content),
         Err(_) => Err("Compose file not found. It might have been created outside this app.".to_string()),
     }

@@ -305,8 +305,8 @@ const Networks = () => {
       </div>
 
       <Sheet open={!!selectedNetwork} onOpenChange={(open) => !open && setSelectedNetwork(null)}>
-        <SheetContent side="right" className="w-[600px] sm:w-[800px] bg-background border-border text-foreground">
-          <SheetHeader>
+        <SheetContent side="right" className="w-[80%] sm:w-[80%] sm:max-w-none bg-background border-border text-foreground flex flex-col p-0 gap-0">
+          <SheetHeader className="p-5 border-b border-border shrink-0 text-left">
             <SheetTitle className="text-foreground flex items-center gap-2">
               <Eye className="w-5 h-5 text-emerald-500" />
               Inspect Network: {selectedNetwork?.name}
@@ -315,8 +315,10 @@ const Networks = () => {
               Detailed configuration for network {selectedNetwork?.id}
             </SheetDescription>
           </SheetHeader>
-          <div className="mt-6 bg-card rounded-lg p-4 font-mono text-xs overflow-auto max-h-[80vh] whitespace-pre-wrap border border-border text-foreground">
-            {inspectData}
+          <div className="flex-1 overflow-auto p-8">
+            <div className="bg-card rounded-lg p-4 font-mono text-xs whitespace-pre-wrap border border-border text-foreground">
+              {inspectData}
+            </div>
           </div>
         </SheetContent>
       </Sheet>

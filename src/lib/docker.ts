@@ -153,9 +153,14 @@ export const pullImage = async (image: string) => {
   return await invoke("pull_image", { image });
 };
 
-export const getContainerLogs = async (id: string): Promise<string> => {
+export const getContainerLogs = async (
+  id: string,
+  timestamps: boolean,
+  tail: number | null,
+  since: number | null
+): Promise<string> => {
   if (!isTauri) return "[MOCK LOGS]\n2023-10-27 10:00:01 INFO: Database connection established\n2023-10-27 10:00:05 DEBUG: Polling for new tasks...";
-  return await invoke("get_container_logs", { id });
+  return await invoke("get_container_logs", { id, timestamps, tail, since });
 };
 
 export const getContainerStats = async (id: string): Promise<ContainerStats> => {
