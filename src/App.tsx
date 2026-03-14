@@ -11,28 +11,31 @@ import Images from "./pages/Images";
 import Volumes from "./pages/Volumes";
 import Networks from "./pages/Networks";
 import AppLayout from "./components/layout/AppLayout";
+import { DockerProvider } from "./context/DockerContext";
 
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <AppLayout>
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/containers" element={<Containers />} />
-            <Route path="/stacks" element={<Stacks />} />
-            <Route path="/images" element={<Images />} />
-            <Route path="/volumes" element={<Volumes />} />
-            <Route path="/networks" element={<Networks />} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </AppLayout>
-      </BrowserRouter>
-    </TooltipProvider>
+    <DockerProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <AppLayout>
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/containers" element={<Containers />} />
+              <Route path="/stacks" element={<Stacks />} />
+              <Route path="/images" element={<Images />} />
+              <Route path="/volumes" element={<Volumes />} />
+              <Route path="/networks" element={<Networks />} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </AppLayout>
+        </BrowserRouter>
+      </TooltipProvider>
+    </DockerProvider>
   </QueryClientProvider>
 );
 

@@ -1,11 +1,11 @@
 "use client";
 
+import { useDocker } from "@/context/DockerContext";
 import { useEffect, useState, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useDockerEvent } from "@/hooks/use-docker-events";
 import { cn } from "@/lib/utils";
 import { 
-  getContainers, 
   startContainer,
   stopContainer,
   restartContainer,
@@ -55,6 +55,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Sheet,
   SheetContent,
@@ -89,22 +90,26 @@ const formatBytes = (bytes: number) => {
 };
 
 const Containers = () => {
-  const [containers, setContainers] = useState<Container[]>([]);
+  const { 
+    containers, 
+    loading, 
+    refreshContainers 
+  } = useDocker();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedContainer, setSelectedContainer] = useState<Container | null>(null);
   const [logs, setLogs] = useState("");
-  const [showTerminal, setShowTerminal] = useState(false);
+  const [panelMode, setPanelMode] = useState<"terminal" | "logs" | "inspect" | null>(null);
   const [inspectData, setInspectData] = useState("");
 
   // Log specific states
   const [autoRefreshLogs, setAutoRefreshLogs] = useState(false);
   const [wrapLines, setWrapLines] = useState(true);
   const [showTimestamps, setShowTimestamps] = useState(false);
-  const [logTimeFilter, setLogTimeFilter] = useState("all"); // e.g., "all", "lastDay", "last4Hours", "lastHour", "last10Minutes"
+  const [logTimeFilter, setLogTimeFilter] = useState("all"); 
   const [logSearchTerm, setLogSearchTerm] = useState("");
-  const [logLineCount, setLogLineCount] = useState(1000); // 0 for all lines
+  const [logLineCount, setLogLineCount] = useState(1000); 
   const [terminalShell, setTerminalShell] = useState<"sh" | "bash" | "ash">("sh");
   const [terminalUser, setTerminalUser] = useState("");
   const [terminalKey, setTerminalKey] = useState(0);
@@ -120,26 +125,11 @@ const Containers = () => {
   // Key to force log re-fetch when options change
   const [logsRefreshKey, setLogsRefreshKey] = useState(0);
 
-  const refreshContainers = useCallback(async (manual = false) => {
-    if (manual) setIsRefreshing(true);
-    try {
-      const data = await getContainers();
-      setContainers(data);
-    } catch (err) {
-      if (manual) showError("Failed to fetch containers. Check Docker daemon.");
-    } finally {
-      if (manual) setIsRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshContainers();
-    // Maintain a fallback interval just in case, but much slower
-    const interval = setInterval(() => refreshContainers(false), 60000);
-    return () => clearInterval(interval);
-  }, [refreshContainers]);
-
-  useDockerEvent("container", () => refreshContainers(false));
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshContainers();
+    setIsRefreshing(false);
+  };
 
   const handleAction = async (action: (id: string) => Promise<unknown>, id: string, name: string) => {
     try {
@@ -150,6 +140,8 @@ const Containers = () => {
       showError(`Error performing action on ${name}`);
     }
   };
+
+  const isInitialLoading = loading.containers && containers.length === 0;
 
   const fetchLogs = useCallback(async (silent = false) => {
     if (!selectedContainer) return;
@@ -201,42 +193,42 @@ const Containers = () => {
     setSelectedContainer(container);
     setLogs("Loading logs...");
     setInspectData("");
-    setShowTerminal(false);
+    setPanelMode("logs");
     setLogsRefreshKey((prev) => prev + 1); // Trigger log re-fetch
   }, []);
 
   // Effect for fetching logs initially and on option changes
   useEffect(() => {
-    if (selectedContainer && !showTerminal) {
+    if (selectedContainer && panelMode === "logs") {
       // If we're already loading or have content, fetch silently to avoid flickering settings
       const isInitial = logs === "Loading logs..." || logs === "";
       fetchLogs(!isInitial);
     }
-  }, [fetchLogs, logsRefreshKey, selectedContainer, showTerminal]);
+  }, [fetchLogs, logsRefreshKey, selectedContainer, panelMode]);
 
   // Effect for auto-refreshing logs
   useEffect(() => {
     let intervalId: NodeJS.Timeout;
-    if (autoRefreshLogs && selectedContainer && !showTerminal) {
+    if (autoRefreshLogs && selectedContainer && panelMode === "logs") {
       intervalId = setInterval(() => fetchLogs(true), 3000); // Refresh every 3 seconds silently
     }
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [autoRefreshLogs, selectedContainer, fetchLogs, showTerminal]);
+  }, [autoRefreshLogs, selectedContainer, fetchLogs, panelMode]);
 
   const openTerminal = (container: Container) => {
     setSelectedContainer(container);
-    setShowTerminal(true);
+    setPanelMode("terminal");
     setLogs("");
     setInspectData("");
   };
 
   const openInspect = async (container: Container) => {
     setSelectedContainer(container);
+    setPanelMode("inspect");
     setInspectData("Loading inspection data...");
     setLogs("");
-    setShowTerminal(false);
     try {
       const data = await (await import("@/lib/docker")).inspectContainer(container.id);
       setInspectData(data);
@@ -384,7 +376,7 @@ const Containers = () => {
           <Button
             variant="outline"
             className="bg-card border-border text-foreground"
-            onClick={() => refreshContainers(true)}
+            onClick={handleRefresh}
             disabled={isRefreshing}
           >
             <RotateCcw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
@@ -440,20 +432,32 @@ const Containers = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filtered.map((container) => (
-              <ContainerRow
-                key={container.id}
-                container={container}
-                isSelected={selectedIds.includes(container.id)}
-                onSelect={() => toggleSelect(container.id)}
-                handleAction={handleAction}
-                handleDuplicate={handleDuplicate}
-                openLogs={openLogs}
-                openTerminal={openTerminal}
-                openInspect={openInspect}
-              />
-            ))}
-            {filtered.length === 0 && (
+            {isInitialLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i} className="border-border">
+                  <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : filtered.length > 0 ? (
+              filtered.map((container) => (
+                <ContainerRow
+                  key={container.id}
+                  container={container}
+                  isSelected={selectedIds.includes(container.id)}
+                  onSelect={() => toggleSelect(container.id)}
+                  handleAction={handleAction}
+                  handleDuplicate={handleDuplicate}
+                  openLogs={openLogs}
+                  openTerminal={openTerminal}
+                  openInspect={openInspect}
+                />
+              ))
+            ) : (
               <TableRow>
                 <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                   No containers found.
@@ -467,22 +471,22 @@ const Containers = () => {
       <Sheet open={!!selectedContainer} onOpenChange={(open) => {
         if (!open) {
           setSelectedContainer(null);
-          setShowTerminal(false);
+          setPanelMode(null);
         }
       }}>
         <SheetContent side="right" className="w-[80%] sm:w-[80%] sm:max-w-none bg-background border-border text-foreground flex flex-col p-0 gap-0">
           <SheetHeader className="p-5 border-b border-border shrink-0">
             <SheetTitle className="text-foreground flex items-center gap-2">
-              {showTerminal ? <CommandLine className="w-5 h-5 text-amber-500" /> : logs ? <Terminal className="w-5 h-5 text-blue-500" /> : <Eye className="w-5 h-5 text-emerald-500" />}
-              {showTerminal ? "Terminal" : logs ? "Logs" : "Inspect"}: {selectedContainer?.name}
+              {panelMode === "terminal" ? <CommandLine className="w-5 h-5 text-amber-500" /> : panelMode === "logs" ? <Terminal className="w-5 h-5 text-blue-500" /> : <Eye className="w-5 h-5 text-emerald-500" />}
+              {panelMode === "terminal" ? "Terminal" : panelMode === "logs" ? "Logs" : "Inspect"}: {selectedContainer?.name}
             </SheetTitle>
             <SheetDescription className="text-muted-foreground">
-              {showTerminal ? `Interactive shell for ${selectedContainer?.image}` : logs ? `Live container output from ${selectedContainer?.image}` : `Configuration details for ${selectedContainer?.id}`}
+              {panelMode === "terminal" ? `Interactive shell for ${selectedContainer?.image}` : panelMode === "logs" ? `Live container output from ${selectedContainer?.image}` : `Configuration details for ${selectedContainer?.id}`}
             </SheetDescription>
           </SheetHeader>
           
           <div className="flex-1 overflow-auto p-5 space-y-3">
-            {showTerminal && selectedContainer ? (
+            {panelMode === "terminal" && selectedContainer ? (
               <div className="flex flex-col h-full space-y-3">
                 <div className="flex items-center gap-2">
                   <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
@@ -521,7 +525,7 @@ const Containers = () => {
                   />
                 </div>
               </div>
-            ) : logs ? (
+            ) : panelMode === "logs" ? (
               <div className="flex flex-col h-full">
                 {/* Log Controls */}
                 <div className="flex flex-wrap items-center gap-3 pb-3 border-b border-border mb-3">
@@ -630,11 +634,11 @@ const Containers = () => {
                   {getVisibleLogs() || (logs === "Loading logs..." ? "Loading logs..." : "No logs available.")}
                 </div>
               </div>
-            ) : (
+            ) : panelMode === "inspect" ? (
               <div className="bg-card rounded-lg p-4 font-mono text-xs overflow-auto whitespace-pre-wrap border border-border h-full">
                 {inspectData}
               </div>
-            )}
+            ) : null}
           </div>
         </SheetContent>
       </Sheet>

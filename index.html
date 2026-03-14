@@ -7,7 +7,238 @@
   </head>
 
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <style>
+        :root {
+          --bg-light: #ffffff;
+          --bg-dark: #09090b;
+          --sidebar-light: #f8fafc;
+          --sidebar-dark: #09090b;
+          --border-light: #e2e8f0;
+          --border-dark: #27272a;
+          --skeleton-light: #f1f5f9;
+          --skeleton-dark: #18181b;
+        }
+
+        html, body {
+          margin: 0;
+          padding: 0;
+          height: 100vh;
+          width: 100vw;
+          overflow: hidden;
+          background: transparent !important;
+        }
+
+        #root {
+          display: flex;
+          height: 100vh;
+          width: 100vw;
+          overflow: hidden;
+          border-radius: 1rem;
+          border: 1px solid var(--border-light);
+          background-color: var(--bg-light);
+          box-sizing: border-box;
+          font-family: system-ui, -apple-system, sans-serif;
+          box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+
+        .dark #root {
+          background-color: var(--bg-dark);
+          border-color: var(--border-dark);
+        }
+
+        .skeleton-sidebar {
+          width: 256px;
+          height: 100%;
+          border-right: 1px solid var(--border-light);
+          background-color: var(--sidebar-light);
+          display: flex;
+          flex-direction: column;
+          box-sizing: border-box;
+          flex-shrink: 0;
+        }
+
+        .dark .skeleton-sidebar {
+          background-color: var(--sidebar-dark);
+          border-color: var(--border-dark);
+        }
+
+        .sidebar-header {
+          padding: 24px;
+          border-bottom: 1px solid var(--border-light);
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+
+        .dark .sidebar-header {
+          border-color: var(--border-dark);
+        }
+
+        .skeleton-main {
+          flex: 1;
+          height: 100%;
+          display: flex;
+          flex-direction: column;
+          box-sizing: border-box;
+          overflow: hidden;
+        }
+
+        .skeleton-header {
+          height: 48px;
+          border-bottom: 1px solid var(--border-light);
+          width: 100%;
+          box-sizing: border-box;
+          display: flex;
+          align-items: center;
+          justify-content: flex-end;
+          padding: 0 16px;
+          gap: 8px;
+        }
+
+        .dark .skeleton-header {
+          border-color: var(--border-dark);
+        }
+
+        .skeleton-content {
+          padding: 32px;
+          flex: 1;
+          overflow: hidden;
+        }
+
+        .skeleton-box {
+          background-color: var(--skeleton-light);
+          border-radius: 0.5rem;
+          animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        .dark .skeleton-box {
+          background-color: var(--skeleton-dark);
+        }
+
+        .skeleton-card {
+          border: 1px solid var(--border-light);
+          background-color: rgba(255, 255, 255, 0.5);
+          border-radius: 0.75rem;
+          padding: 16px;
+          display: flex;
+          flex-direction: column;
+        }
+        .dark .skeleton-card {
+          border-color: var(--border-dark);
+          background-color: rgba(9, 9, 11, 0.5);
+        }
+
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: .5; }
+        }
+
+        .mb-2 { margin-bottom: 8px; }
+        .mb-4 { margin-bottom: 16px; }
+        .mb-6 { margin-bottom: 24px; }
+        .w-6 { width: 24px; }
+        .w-10 { width: 40px; }
+        .w-28 { width: 112px; }
+        .w-32 { width: 128px; }
+        .w-48 { width: 192px; }
+        .h-4 { height: 16px; }
+        .h-5 { height: 20px; }
+        .h-6 { height: 24px; }
+        .h-8 { height: 32px; }
+        .h-10 { height: 40px; }
+        .h-24 { height: 96px; }
+        .h-64 { height: 256px; }
+        .h-48 { height: 192px; }
+        
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+        .grid-3 { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; }
+        
+        .sidebar-item {
+          height: 36px;
+          width: 100%;
+          margin-bottom: 8px;
+          border-radius: 6px;
+          background-color: var(--skeleton-light);
+          opacity: 0.3;
+        }
+        .dark .sidebar-item { background-color: var(--skeleton-dark); }
+      </style>
+      <script>
+        (function() {
+          try {
+            const theme = localStorage.getItem('theme');
+            const supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches === true;
+            if (theme === 'dark' || (!theme && supportDarkMode)) {
+              document.documentElement.classList.add('dark');
+            }
+          } catch (e) {}
+        })();
+      </script>
+      <div class="skeleton-sidebar">
+        <div class="sidebar-header mb-4">
+          <div class="skeleton-box h-10 w-10" style="border-radius: 0.5rem;"></div>
+          <div class="skeleton-box h-5 w-28"></div>
+        </div>
+        <div style="padding: 0 16px;">
+          <div class="sidebar-item" style="opacity: 0.8;"></div>
+          <div class="sidebar-item"></div>
+          <div class="sidebar-item"></div>
+          <div class="sidebar-item"></div>
+          <div class="sidebar-item"></div>
+          <div class="sidebar-item"></div>
+        </div>
+      </div>
+      <div class="skeleton-main">
+        <div class="skeleton-header">
+          <div class="skeleton-box h-6 w-6" style="opacity: 0.2;"></div>
+          <div class="skeleton-box h-6 w-6" style="opacity: 0.2;"></div>
+          <div class="skeleton-box h-6 w-6" style="opacity: 0.2;"></div>
+        </div>
+        <div class="skeleton-content">
+          <div class="skeleton-box h-8 w-48 mb-2"></div>
+          <div class="skeleton-box h-4 w-32 mb-6" style="opacity: 0.5;"></div>
+          
+          <div class="grid-4 mb-6">
+            <div class="skeleton-card h-24">
+              <div class="skeleton-box h-4 w-28 mb-2"></div>
+              <div class="skeleton-box h-8 w-12"></div>
+            </div>
+            <div class="skeleton-card h-24">
+              <div class="skeleton-box h-4 w-28 mb-2"></div>
+              <div class="skeleton-box h-8 w-12"></div>
+            </div>
+            <div class="skeleton-card h-24">
+              <div class="skeleton-box h-4 w-28 mb-2"></div>
+              <div class="skeleton-box h-8 w-12"></div>
+            </div>
+            <div class="skeleton-card h-24">
+              <div class="skeleton-box h-4 w-28 mb-2"></div>
+              <div class="skeleton-box h-8 w-12"></div>
+            </div>
+          </div>
+          
+          <div class="grid-3 mb-6">
+            <div class="skeleton-card h-64">
+              <div class="skeleton-box h-6 w-48 mb-4"></div>
+              <div class="skeleton-box h-4 w-full mb-2"></div>
+              <div class="skeleton-box h-4 w-full mb-2"></div>
+              <div class="skeleton-box h-4 w-full mb-2"></div>
+            </div>
+            <div class="skeleton-card h-64">
+              <div class="skeleton-box h-6 w-48 mb-4"></div>
+              <div class="skeleton-box h-48 w-48 rounded-full mx-auto"></div>
+            </div>
+          </div>
+          
+          <div class="skeleton-card h-48 w-full">
+            <div class="skeleton-box h-6 w-48 mb-4"></div>
+            <div class="skeleton-box h-8 w-full mb-2"></div>
+            <div class="skeleton-box h-8 w-full"></div>
+          </div>
+        </div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

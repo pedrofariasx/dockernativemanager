@@ -1,10 +1,11 @@
 "use client";
 
+import { useDocker } from "@/context/DockerContext";
 import { useEffect, useState, useCallback } from "react";
 import { listen } from "@tauri-apps/api/event";
 import { useDockerEvent } from "@/hooks/use-docker-events";
 import { cn } from "@/lib/utils";
-import { getImages, deleteImage, pullImage, Image, inspectImage } from "@/lib/docker";
+import { deleteImage, pullImage, Image, inspectImage } from "@/lib/docker";
 import {
   Table,
   TableBody,
@@ -33,6 +34,7 @@ import {
   MoreVertical
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { showSuccess, showError } from "@/utils/toast";
 import {
   Dialog,
@@ -60,7 +62,11 @@ interface PullProgressPayload {
 }
 
 const Images = () => {
-  const [images, setImages] = useState<Image[]>([]);
+  const {
+    images,
+    loading,
+    refreshImages
+  } = useDocker();
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [isPulling, setIsPulling] = useState(false);
@@ -72,23 +78,11 @@ const Images = () => {
   const [pullStatus, setPullStatus] = useState<string>("");
   const [pullProgress, setPullProgress] = useState<number | null>(null);
 
-  const refreshImages = useCallback(async () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    try {
-      const data = await getImages();
-      setImages(data);
-    } catch (err) {
-      showError("Failed to fetch images.");
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshImages();
-  }, [refreshImages]);
-
-  useDockerEvent("image", refreshImages);
+    await refreshImages();
+    setIsRefreshing(false);
+  };
 
   const handleDelete = async (id: string, repo: string) => {
     try {
@@ -99,6 +93,8 @@ const Images = () => {
       showError(`Error deleting image ${repo}`);
     }
   };
+
+  const isInitialLoading = loading.images && images.length === 0;
 
   const handlePull = async () => {
     if (!pullImageUrl) return;
@@ -254,57 +250,69 @@ const Images = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((img) => (
-                <TableRow
-                  key={img.id}
-                  className={cn(
-                    "border-border hover:bg-muted transition-colors",
-                    selectedIds.includes(img.id) && "bg-muted"
-                  )}
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedIds.includes(img.id)}
-                      onCheckedChange={() => toggleSelect(img.id)}
-                      className="border-border data-[state=checked]:bg-blue-600"
-                    />
-                  </TableCell>
-                  <TableCell className="font-semibold text-foreground">{img.repository}</TableCell>
-                  <TableCell>
-                    <span className="bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded border border-border font-mono">
-                      {img.tag}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs font-mono">{img.id}</TableCell>
-                  <TableCell className="text-muted-foreground text-xs flex items-center gap-2">
-                    <HardDrive className="w-3 h-3 text-muted-foreground" />
-                    {img.size}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
-                          <span className="sr-only">Open menu</span>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[160px] bg-card border-border">
-                        <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
-                        <DropdownMenuItem className="hover:bg-muted focus:bg-muted cursor-pointer" onClick={() => openInspect(img)}>
-                          <Eye className="mr-2 h-4 w-4 text-emerald-500" />
-                          <span>Inspect</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-border" />
-                        <DropdownMenuItem onClick={() => handleDelete(img.id, img.repository)} className="text-rose-500 focus:text-rose-500 focus:bg-rose-500/10 hover:bg-rose-500/10 cursor-pointer">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Delete</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+              {isInitialLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i} className="border-border">
+                    <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : filtered.length > 0 ? (
+                filtered.map((img) => (
+                  <TableRow
+                    key={img.id}
+                    className={cn(
+                      "border-border hover:bg-muted transition-colors",
+                      selectedIds.includes(img.id) && "bg-muted"
+                    )}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(img.id)}
+                        onCheckedChange={() => toggleSelect(img.id)}
+                        className="border-border data-[state=checked]:bg-blue-600"
+                      />
+                    </TableCell>
+                    <TableCell className="font-semibold text-foreground">{img.repository}</TableCell>
+                    <TableCell>
+                      <span className="bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded border border-border font-mono">
+                        {img.tag}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs font-mono">{img.id}</TableCell>
+                    <TableCell className="text-muted-foreground text-xs flex items-center gap-2">
+                      <HardDrive className="w-3 h-3 text-muted-foreground" />
+                      {img.size}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0 text-muted-foreground hover:text-foreground">
+                            <span className="sr-only">Open menu</span>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[160px] bg-card border-border">
+                          <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
+                          <DropdownMenuItem className="hover:bg-muted focus:bg-muted cursor-pointer" onClick={() => openInspect(img)}>
+                            <Eye className="mr-2 h-4 w-4 text-emerald-500" />
+                            <span>Inspect</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-border" />
+                          <DropdownMenuItem onClick={() => handleDelete(img.id, img.repository)} className="text-rose-500 focus:text-rose-500 focus:bg-rose-500/10 hover:bg-rose-500/10 cursor-pointer">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
                   <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
                     No images found.

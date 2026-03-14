@@ -1,10 +1,10 @@
 "use client";
 
+import { useDocker } from "@/context/DockerContext";
 import { useEffect, useState, useCallback } from "react";
-import { listen } from "@tauri-apps/api/event";
 import { useDockerEvent } from "@/hooks/use-docker-events";
 import { cn } from "@/lib/utils";
-import { getVolumes, deleteVolume, createVolume, Volume, inspectVolume } from "@/lib/docker";
+import { deleteVolume, createVolume, Volume, inspectVolume } from "@/lib/docker";
 import { 
   Table, 
   TableBody, 
@@ -34,6 +34,7 @@ import {
   MoreVertical
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { showSuccess, showError } from "@/utils/toast";
 import { 
   Dialog, 
@@ -52,7 +53,11 @@ import {
 } from "@/components/ui/sheet";
 
 const Volumes = () => {
-  const [volumes, setVolumes] = useState<Volume[]>([]);
+  const {
+    volumes,
+    loading,
+    refreshVolumes
+  } = useDocker();
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [driverFilter, setDriverFilter] = useState<string>("all");
@@ -63,23 +68,11 @@ const Volumes = () => {
   const [selectedVolume, setSelectedVolume] = useState<Volume | null>(null);
   const [inspectData, setInspectData] = useState("");
 
-  const refreshVolumes = useCallback(async () => {
+  const handleRefresh = async () => {
     setIsRefreshing(true);
-    try {
-      const data = await getVolumes();
-      setVolumes(data);
-    } catch (err) {
-      showError("Failed to fetch volumes.");
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshVolumes();
-  }, [refreshVolumes]);
-
-  useDockerEvent("volume", refreshVolumes);
+    await refreshVolumes();
+    setIsRefreshing(false);
+  };
 
   const handleDelete = async (name: string) => {
     try {
@@ -90,6 +83,8 @@ const Volumes = () => {
       showError(`Error deleting volume ${name}: ${err}`);
     }
   };
+
+  const isInitialLoading = loading.volumes && volumes.length === 0;
 
   const handleCreate = async () => {
     if (!newName) return;
@@ -239,58 +234,69 @@ const Volumes = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((v) => (
-                <TableRow
-                  key={v.name}
-                  className={cn(
-                    "border-border hover:bg-muted transition-colors",
-                    selectedIds.includes(v.name) && "bg-muted"
-                  )}
-                >
-                  <TableCell>
-                    <Checkbox
-                      checked={selectedIds.includes(v.name)}
-                      onCheckedChange={() => toggleSelect(v.name)}
-                      className="border-border data-[state=checked]:bg-blue-600"
-                    />
-                  </TableCell>
-                  <TableCell className="font-semibold text-foreground">
-                    <div className="flex items-center gap-2">
-                      <Database className="w-4 h-4 text-blue-500" />
-                      {v.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className="bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded border border-border font-mono">
-                      {v.driver}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-xs font-mono max-w-md truncate">{v.mountpoint}</TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[160px] bg-card border-border">
-                        <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
-                        <DropdownMenuItem className="hover:bg-muted focus:bg-muted cursor-pointer" onClick={() => openInspect(v)}>
-                          <Eye className="mr-2 h-4 w-4 text-emerald-500" />
-                          <span>Inspect</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-border" />
-                        <DropdownMenuItem onClick={() => handleDelete(v.name)} className="text-rose-500 focus:text-rose-500 focus:bg-rose-500/10 hover:bg-rose-500/10 cursor-pointer">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Delete</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+              {isInitialLoading ? (
+                Array.from({ length: 5 }).map((_, i) => (
+                  <TableRow key={i} className="border-border">
+                    <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-64" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : filtered.length > 0 ? (
+                filtered.map((v) => (
+                  <TableRow
+                    key={v.name}
+                    className={cn(
+                      "border-border hover:bg-muted transition-colors",
+                      selectedIds.includes(v.name) && "bg-muted"
+                    )}
+                  >
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedIds.includes(v.name)}
+                        onCheckedChange={() => toggleSelect(v.name)}
+                        className="border-border data-[state=checked]:bg-blue-600"
+                      />
+                    </TableCell>
+                    <TableCell className="font-semibold text-foreground">
+                      <div className="flex items-center gap-2">
+                        <Database className="w-4 h-4 text-blue-500" />
+                        {v.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="bg-muted text-muted-foreground text-[10px] px-2 py-0.5 rounded border border-border font-mono">
+                        {v.driver}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-xs font-mono max-w-md truncate">{v.mountpoint}</TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[160px] bg-card border-border">
+                          <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
+                          <DropdownMenuItem className="hover:bg-muted focus:bg-muted cursor-pointer" onClick={() => openInspect(v)}>
+                            <Eye className="mr-2 h-4 w-4 text-emerald-500" />
+                            <span>Inspect</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-border" />
+                          <DropdownMenuItem onClick={() => handleDelete(v.name)} className="text-rose-500 focus:text-rose-500 focus:bg-rose-500/10 hover:bg-rose-500/10 cursor-pointer">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
                   <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                     No volumes found.

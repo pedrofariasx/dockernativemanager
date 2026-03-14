@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { getSystemInfo, SystemInfo, getVolumes, getNetworks } from "@/lib/docker";
+import { useState } from "react";
+import { useDocker } from "@/context/DockerContext";
 import { useDockerEvent } from "@/hooks/use-docker-events";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Box, Layers, HardDrive, Cpu, Activity, Info, Network, Database } from "lucide-react";
+import { Box, Layers, Activity, Info, Network, Database } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts";
 
@@ -17,29 +17,11 @@ const formatBytes = (bytes: number) => {
 };
 
 const Index = () => {
-  const [info, setInfo] = useState<SystemInfo | null>(null);
-  const [counts, setCounts] = useState({ volumes: 0, networks: 0 });
-  const [loading, setLoading] = useState(true);
+  const { systemInfo: info, volumes, networks, loading, refreshAll } = useDocker();
   const [events, setEvents] = useState<{ time: Date; type: string; action: string; id: string }[]>([]);
 
-  const fetchInfo = useCallback(async () => {
-    try {
-      const [data, vols, nets] = await Promise.all([
-        getSystemInfo(),
-        getVolumes(),
-        getNetworks()
-      ]);
-      setInfo(data);
-      setCounts({ volumes: vols.length, networks: nets.length });
-    } catch (err) {
-      console.error("Failed to fetch system info", err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
   useDockerEvent("all", (event) => {
-    fetchInfo();
+    refreshAll();
     if (event) {
       setEvents((prev) => {
         const newEvents = [{
@@ -59,11 +41,7 @@ const Index = () => {
     { name: "Paused", value: info.containers_paused, color: "#f59e0b" },
   ].filter(d => d.value > 0) : [];
 
-  useEffect(() => {
-    fetchInfo();
-  }, [fetchInfo]);
-
-  useDockerEvent("all", fetchInfo);
+  const isInitialLoading = loading.systemInfo && !info;
 
   return (
     <div className="p-8 space-y-6">
@@ -78,28 +56,28 @@ const Index = () => {
           value={info?.containers}
           subtext={`${info?.containers_running} running, ${info?.containers_stopped} stopped`}
           icon={<Box className="w-5 h-5 text-blue-500" />}
-          loading={loading}
+          loading={isInitialLoading}
         />
         <StatCard
           title="Images"
           value={info?.images}
           subtext="Total images on disk"
           icon={<Layers className="w-5 h-5 text-emerald-500" />}
-          loading={loading}
+          loading={isInitialLoading}
         />
         <StatCard
           title="Volumes"
-          value={counts.volumes}
+          value={volumes.length}
           subtext="Local storage volumes"
           icon={<Database className="w-5 h-5 text-amber-500" />}
-          loading={loading}
+          loading={loading.volumes && volumes.length === 0}
         />
         <StatCard
           title="Networks"
-          value={counts.networks}
+          value={networks.length}
           subtext="Docker networks"
           icon={<Network className="w-5 h-5 text-purple-500" />}
-          loading={loading}
+          loading={loading.networks && networks.length === 0}
         />
       </div>
 
@@ -115,19 +93,19 @@ const Index = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Docker Version</p>
-                {loading ? <Skeleton className="h-6 w-24" /> : <p className="text-foreground font-mono text-lg">{info?.version}</p>}
+                {isInitialLoading ? <Skeleton className="h-6 w-24" /> : <p className="text-foreground font-mono text-lg">{info?.version}</p>}
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Operating System</p>
-                {loading ? <Skeleton className="h-6 w-48" /> : <p className="text-foreground text-lg">{info?.operating_system}</p>}
+                {isInitialLoading ? <Skeleton className="h-6 w-48" /> : <p className="text-foreground text-lg">{info?.operating_system}</p>}
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">CPU Cores</p>
-                {loading ? <Skeleton className="h-6 w-16" /> : <p className="text-foreground text-lg">{info?.ncpu} Cores</p>}
+                {isInitialLoading ? <Skeleton className="h-6 w-16" /> : <p className="text-foreground text-lg">{info?.ncpu} Cores</p>}
               </div>
               <div className="space-y-1">
                 <p className="text-sm text-muted-foreground uppercase tracking-wider font-semibold">Total RAM</p>
-                {loading ? <Skeleton className="h-6 w-24" /> : <p className="text-foreground text-lg">{info ? formatBytes(info.mem_total) : ""}</p>}
+                {isInitialLoading ? <Skeleton className="h-6 w-24" /> : <p className="text-foreground text-lg">{info ? formatBytes(info.mem_total) : ""}</p>}
               </div>
             </div>
           </CardContent>
@@ -141,7 +119,7 @@ const Index = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col items-center justify-center min-h-[250px]">
-            {loading ? (
+            {isInitialLoading ? (
               <Skeleton className="w-[200px] h-[200px] rounded-full" />
             ) : chartData.length > 0 ? (
               <ResponsiveContainer width="100%" height={200}>

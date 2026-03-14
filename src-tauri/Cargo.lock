@@ -673,7 +673,7 @@ dependencies = [
 
 [[package]]
 name = "docker-native-manager"
-version = "1.1.1-alpha"
+version = "1.2.1-alpha"
 dependencies = [
  "bollard",
  "futures-util",

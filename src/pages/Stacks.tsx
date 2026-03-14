@@ -1,9 +1,10 @@
 "use client";
 
+import { useDocker } from "@/context/DockerContext";
 import { useEffect, useState, useCallback } from "react";
 import { useDockerEvent } from "@/hooks/use-docker-events";
 import { cn } from "@/lib/utils";
-import { getStacks, deployStack, removeStack, getStackCompose, Stack, getContainers } from "@/lib/docker";
+import { deployStack, removeStack, getStackCompose, Stack, getContainers } from "@/lib/docker";
 import {
   Table,
   TableBody, 
@@ -33,6 +34,7 @@ import {
   MoreVertical
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { showSuccess, showError } from "@/utils/toast";
 import { 
   Dialog, 
@@ -52,7 +54,11 @@ import {
 } from "@/components/ui/sheet";
 
 const Stacks = () => {
-  const [stacks, setStacks] = useState<Stack[]>([]);
+  const { 
+    stacks, 
+    loading, 
+    refreshStacks 
+  } = useDocker();
   const [search, setSearch] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showDeployDialog, setShowDeployDialog] = useState(false);
@@ -63,32 +69,17 @@ const Stacks = () => {
   const [selectedStack, setSelectedStack] = useState<Stack | null>(null);
   const [stackContainers, setStackContainers] = useState<unknown[]>([]);
 
-  const refreshStacks = useCallback(async (manual = false) => {
-    if (manual) setIsRefreshing(true);
-    try {
-      const data = await getStacks();
-      setStacks(data);
-    } catch (err) {
-      if (manual) showError("Failed to fetch stacks.");
-    } finally {
-      if (manual) setIsRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshStacks();
-    // Maintain a fallback interval just in case
-    const interval = setInterval(() => refreshStacks(false), 60000);
-    return () => clearInterval(interval);
-  }, [refreshStacks]);
-
-  useDockerEvent("all", () => refreshStacks(false));
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    await refreshStacks();
+    setIsRefreshing(false);
+  };
 
   const handleDelete = async (name: string) => {
     try {
       await removeStack(name);
       showSuccess(`Stack ${name} removal initiated`);
-      refreshStacks(true);
+      refreshStacks();
     } catch (err) {
       showError(`Error removing stack ${name}: ${err}`);
     }
@@ -103,13 +94,15 @@ const Stacks = () => {
       setShowDeployDialog(false);
       setNewName("");
       setComposeContent("");
-      refreshStacks(true);
+      refreshStacks();
     } catch (err) {
       showError(`Error deploying stack: ${err}`);
     } finally {
       setIsDeploying(false);
     }
   };
+
+  const isInitialLoading = loading.stacks && stacks.length === 0;
 
   const handleEdit = async (stack: Stack) => {
     try {
@@ -156,8 +149,8 @@ const Stacks = () => {
           <div className="flex gap-2">
             <Button 
               variant="outline" 
-              className="bg-card border-border text-foreground" 
-              onClick={() => refreshStacks(true)}
+              className="bg-card border-border text-foreground"
+              onClick={handleRefresh}
               disabled={isRefreshing}
             >
               <RotateCcw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
@@ -191,59 +184,69 @@ const Stacks = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((s) => (
-                <TableRow key={s.name} className="border-border hover:bg-muted transition-colors">
-                  <TableCell className="font-semibold text-foreground">
-                    <div className="flex items-center gap-2">
-                      <Layers className="w-4 h-4 text-indigo-500" />
-                      {s.name}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <span className={cn(
-                      "px-2 py-0.5 rounded text-[10px] font-mono uppercase border",
-                      s.status === "running" 
-                        ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" 
-                        : "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                    )}>
-                      {s.status}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground text-sm">
-                    <div className="flex items-center gap-2">
-                      <Activity className="w-3 h-3" />
-                      {s.services} services
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
-                          <span className="sr-only">Open menu</span>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-[160px] bg-card border-border">
-                        <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
-                        <DropdownMenuItem className="hover:bg-muted focus:bg-muted cursor-pointer" onClick={() => openStackDetails(s)}>
-                          <Eye className="mr-2 h-4 w-4 text-emerald-500" />
-                          <span>View Details</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem className="hover:bg-muted focus:bg-muted cursor-pointer" onClick={() => handleEdit(s)}>
-                          <Layers className="mr-2 h-4 w-4 text-indigo-500" />
-                          <span>Edit Stack</span>
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator className="bg-border" />
-                        <DropdownMenuItem onClick={() => handleDelete(s.name)} className="text-rose-500 focus:text-rose-500 focus:bg-rose-500/10 hover:bg-rose-500/10 cursor-pointer">
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          <span>Delete Stack</span>
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </TableCell>
-                </TableRow>
-              ))}
-              {filtered.length === 0 && (
+              {isInitialLoading ? (
+                Array.from({ length: 3 }).map((_, i) => (
+                  <TableRow key={i} className="border-border">
+                    <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-20" /></TableCell>
+                    <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                  </TableRow>
+                ))
+              ) : filtered.length > 0 ? (
+                filtered.map((s) => (
+                  <TableRow key={s.name} className="border-border hover:bg-muted transition-colors">
+                    <TableCell className="font-semibold text-foreground">
+                      <div className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-indigo-500" />
+                        {s.name}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className={cn(
+                        "px-2 py-0.5 rounded text-[10px] font-mono uppercase border",
+                        s.status === "running"
+                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                          : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                      )}>
+                        {s.status}
+                      </span>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground text-sm">
+                      <div className="flex items-center gap-2">
+                        <Activity className="w-3 h-3" />
+                        {s.services} services
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-[160px] bg-card border-border">
+                          <DropdownMenuLabel className="text-muted-foreground">Actions</DropdownMenuLabel>
+                          <DropdownMenuItem className="hover:bg-muted focus:bg-muted cursor-pointer" onClick={() => openStackDetails(s)}>
+                            <Eye className="mr-2 h-4 w-4 text-emerald-500" />
+                            <span>View Details</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="hover:bg-muted focus:bg-muted cursor-pointer" onClick={() => handleEdit(s)}>
+                            <Layers className="mr-2 h-4 w-4 text-indigo-500" />
+                            <span>Edit Stack</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator className="bg-border" />
+                          <DropdownMenuItem onClick={() => handleDelete(s.name)} className="text-rose-500 focus:text-rose-500 focus:bg-rose-500/10 hover:bg-rose-500/10 cursor-pointer">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            <span>Delete Stack</span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
                 <TableRow>
                   <TableCell colSpan={4} className="h-32 text-center text-muted-foreground">
                     No stacks found.

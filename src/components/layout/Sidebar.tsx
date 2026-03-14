@@ -12,7 +12,13 @@ import {
   Trash,
   Loader2,
   Moon,
-  Sun
+  Sun,
+  Images,
+  ImageIcon,
+  FileImage,
+  ImagePlayIcon,
+  Disc,
+  Disc2
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { dockerSystemPrune } from "@/lib/docker";
@@ -21,12 +27,13 @@ import { useState, useEffect } from "react";
 import { getVersion } from "@tauri-apps/api/app";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "next-themes";
+import { AvatarImage, Image } from "@radix-ui/react-avatar";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard },
   { name: "Containers", path: "/containers", icon: Box },
   { name: "Stacks", path: "/stacks", icon: Layers },
-  { name: "Images", path: "/images", icon: Layers },
+  { name: "Images", path: "/images", icon: Disc2 },
   { name: "Volumes", path: "/volumes", icon: Database },
   { name: "Networks", path: "/networks", icon: NetworkIcon },
 ];

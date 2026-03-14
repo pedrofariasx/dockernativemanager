@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { listen } from "@tauri-apps/api/event";
+import { useDocker } from "@/context/DockerContext";
+import { useState, useEffect, useCallback } from "react";
 import { useDockerEvent } from "@/hooks/use-docker-events";
 import { cn } from "@/lib/utils";
-import { getNetworks, deleteNetwork, createNetwork, Network, inspectNetwork } from "@/lib/docker";
+import { deleteNetwork, createNetwork, Network, inspectNetwork } from "@/lib/docker";
 import { 
   Table, 
   TableBody, 
@@ -34,6 +34,7 @@ import {
   MoreVertical
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { showSuccess, showError } from "@/utils/toast";
 import { 
   Dialog, 
@@ -52,34 +53,19 @@ import {
 } from "@/components/ui/sheet";
 
 const Networks = () => {
-  const [networks, setNetworks] = useState<Network[]>([]);
+  const {
+    networks,
+    loading,
+    refreshNetworks
+  } = useDocker();
   const [search, setSearch] = useState("");
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [driverFilter, setDriverFilter] = useState<string>("all");
-  const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newName, setNewName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
   const [selectedNetwork, setSelectedNetwork] = useState<Network | null>(null);
   const [inspectData, setInspectData] = useState("");
-
-  const refreshNetworks = useCallback(async () => {
-    setIsRefreshing(true);
-    try {
-      const data = await getNetworks();
-      setNetworks(data);
-    } catch (err) {
-      showError("Failed to fetch networks.");
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    refreshNetworks();
-  }, [refreshNetworks]);
-
-  useDockerEvent("network", refreshNetworks);
 
   const handleDelete = async (id: string, name: string) => {
     try {
@@ -90,6 +76,8 @@ const Networks = () => {
       showError(`Error deleting network ${name}: ${err}`);
     }
   };
+
+  const isInitialLoading = loading.networks && networks.length === 0;
 
   const handleCreate = async () => {
     if (!newName) return;
@@ -145,7 +133,7 @@ const Networks = () => {
     if (selectedIds.length === 0) return;
     const count = selectedIds.length;
     let successCount = 0;
-    setIsRefreshing(true);
+    
     for (const id of selectedIds) {
       try {
         await deleteNetwork(id);
@@ -154,7 +142,7 @@ const Networks = () => {
         console.error(`Failed to delete network ${id}:`, err);
       }
     }
-    setIsRefreshing(false);
+    
     showSuccess(`${successCount}/${count} networks deleted`);
     setSelectedIds([]);
     refreshNetworks();
@@ -184,10 +172,10 @@ const Networks = () => {
               variant="outline"
               className="bg-card border-border text-foreground"
               onClick={refreshNetworks}
-              disabled={isRefreshing}
+              disabled={loading.networks}
             >
-              <RotateCcw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
-              {isRefreshing ? "Refreshing..." : "Refresh"}
+              <RotateCcw className={cn("w-4 h-4 mr-2", loading.networks && "animate-spin")} />
+              {loading.networks ? "Refreshing..." : "Refresh"}
             </Button>
             <Button className="bg-blue-600 hover:bg-blue-700" onClick={() => setShowCreateDialog(true)}>
               <Plus className="w-4 h-4 mr-2" />
@@ -239,8 +227,20 @@ const Networks = () => {
                 <TableHead className="text-muted-foreground font-medium text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {filtered.map((n) => (
+          <TableBody>
+            {isInitialLoading ? (
+              Array.from({ length: 5 }).map((_, i) => (
+                <TableRow key={i} className="border-border">
+                  <TableCell><Skeleton className="h-4 w-4" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-40" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                  <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto" /></TableCell>
+                </TableRow>
+              ))
+            ) : filtered.length > 0 ? (
+              filtered.map((n) => (
                 <TableRow
                   key={n.id}
                   className={cn(
@@ -291,15 +291,15 @@ const Networks = () => {
                     </DropdownMenu>
                   </TableCell>
                 </TableRow>
-              ))}
-              {filtered.length === 0 && (
-                <TableRow>
-                  <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                    No networks found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
+                  No networks found.
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
           </Table>
         </div>
       </div>
