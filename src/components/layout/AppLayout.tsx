@@ -71,7 +71,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-8">
+        <div className="flex-1 overflow-auto relative">
           {children}
         </div>
       </main>

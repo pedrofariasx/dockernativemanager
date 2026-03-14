@@ -161,7 +161,7 @@ const Networks = () => {
   };
 
   return (
-    <>
+    <div className="p-8">
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -349,7 +349,7 @@ const Networks = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 };
 

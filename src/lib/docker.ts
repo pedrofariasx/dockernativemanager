@@ -235,7 +235,16 @@ export const getSystemInfo = async (): Promise<SystemInfo> => {
   return await invoke("get_system_info");
 };
 
-export const execContainer = async (containerId: string, command: string): Promise<void> => {
-  if (!isTauri) return console.log("Mock: Executing in container", containerId, command);
-  return await invoke("exec_container", { containerId, command });
+export const execContainer = async (
+  containerId: string,
+  shell: string = "sh",
+  user?: string
+): Promise<void> => {
+  if (!isTauri) return console.log("Mock: Executing in container", containerId, shell, user);
+  return await invoke("exec_container", { containerId, shell, user: user ?? null });
+};
+
+export const writeStdin = async (containerId: string, data: string): Promise<void> => {
+  if (!isTauri) return console.log("Mock: Writing stdin", containerId, data);
+  return await invoke("write_stdin", { containerId, data });
 };

@@ -101,6 +101,6 @@
   }
 
   #root {
-    @apply h-screen w-screen overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl;
+    @apply relative h-screen w-screen overflow-hidden rounded-xl border border-border/50 bg-background shadow-2xl;
   }
 }

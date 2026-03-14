@@ -6,11 +6,6 @@ import { ThemeProvider } from "next-themes";
 if (!import.meta.env.DEV) {
   document.addEventListener("contextmenu", (e) => e.preventDefault());
   document.addEventListener("dragstart", (e) => e.preventDefault());
-  document.addEventListener("selectstart", (e) => {
-    if ((e.target as HTMLElement).tagName !== "INPUT" && (e.target as HTMLElement).tagName !== "TEXTAREA") {
-      e.preventDefault();
-    }
-  });
 }
 
 createRoot(document.getElementById("root")!).render(

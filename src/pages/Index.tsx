@@ -66,7 +66,7 @@ const Index = () => {
   useDockerEvent("all", fetchInfo);
 
   return (
-    <div className="space-y-6">
+    <div className="p-8 space-y-6">
       <div>
         <h2 className="text-3xl font-bold text-foreground tracking-tight">Dashboard</h2>
         <p className="text-muted-foreground mt-1">System overview and Docker daemon status.</p>

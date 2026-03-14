@@ -146,7 +146,7 @@ const Stacks = () => {
   );
 
   return (
-    <>
+    <div className="p-8">
       <div className="space-y-6">
         <div className="flex justify-between items-center">
           <div>
@@ -362,7 +362,7 @@ const Stacks = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </>
+    </div>
   );
 };
 

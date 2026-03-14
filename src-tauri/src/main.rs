@@ -10,7 +10,12 @@ use bollard::network::{ListNetworksOptions, CreateNetworkOptions, InspectNetwork
 use futures_util::stream::StreamExt;
 use serde::Serialize;
 use std::collections::HashMap;
+use std::sync::Mutex;
 use bollard::exec::{CreateExecOptions, StartExecResults};
+use tokio::sync::mpsc;
+use tokio::io::AsyncWriteExt;
+
+type TerminalSenders = Mutex<HashMap<String, mpsc::Sender<String>>>;
 
 #[derive(Serialize)]
 struct ContainerInfo {
@@ -514,29 +519,84 @@ async fn inspect_image(id: String) -> Result<String, String> {
 }
 
 #[tauri::command]
-async fn exec_container(app: AppHandle, container_id: String, command: String) -> Result<(), String> {
+async fn exec_container(
+    app: AppHandle,
+    senders: tauri::State<'_, TerminalSenders>,
+    container_id: String,
+    shell: String,
+    user: Option<String>,
+) -> Result<(), String> {
     let docker = Docker::connect_with_local_defaults().map_err(|e| e.to_string())?;
 
-    let exec_config = CreateExecOptions {
+    let shell_path = match shell.as_str() {
+        "bash" => "/bin/bash",
+        "ash" => "/bin/ash",
+        _ => "/bin/sh",
+    };
+
+    let mut exec_config = CreateExecOptions {
         attach_stdout: Some(true),
         attach_stderr: Some(true),
         attach_stdin: Some(true),
         tty: Some(true),
-        cmd: Some(vec!["/bin/sh", "-c", &command]),
+        cmd: Some(vec![shell_path]),
         ..Default::default()
     };
 
-    let exec = docker.create_exec(&container_id, exec_config).await.map_err(|e| e.to_string())?;
-    
-    if let StartExecResults::Attached { mut output, .. } = docker.start_exec(&exec.id, None).await.map_err(|e| e.to_string())? {
-        while let Some(msg) = output.next().await {
-            if let Ok(msg) = msg {
-                app.emit(&format!("exec-output-{}", container_id), msg.to_string()).map_err(|e| e.to_string())?;
-            }
+    if let Some(ref u) = user {
+        if !u.is_empty() {
+            exec_config.user = Some(u.as_str());
         }
     }
 
+    let exec = docker.create_exec(&container_id, exec_config).await.map_err(|e| e.to_string())?;
+
+    if let StartExecResults::Attached { mut output, mut input } = docker
+        .start_exec(&exec.id, None)
+        .await
+        .map_err(|e| e.to_string())?
+    {
+        let (tx, mut rx) = mpsc::channel::<String>(64);
+        {
+            let mut map = senders.lock().unwrap();
+            map.insert(container_id.clone(), tx);
+        }
+
+        // Spawn stdin writer task
+        tokio::spawn(async move {
+            while let Some(data) = rx.recv().await {
+                let _ = input.write_all(data.as_bytes()).await;
+            }
+        });
+
+        // Read output and emit to frontend
+        while let Some(msg) = output.next().await {
+            if let Ok(msg) = msg {
+                app.emit(&format!("exec-output-{}", container_id), msg.to_string())
+                    .map_err(|e| e.to_string())?;
+            }
+        }
+
+        // Clean up sender when process exits
+        senders.lock().unwrap().remove(&container_id);
+    }
+
     Ok(())
+}
+
+#[tauri::command]
+async fn write_stdin(
+    senders: tauri::State<'_, TerminalSenders>,
+    container_id: String,
+    data: String,
+) -> Result<(), String> {
+    let map = senders.lock().unwrap();
+    if let Some(tx) = map.get(&container_id) {
+        tx.try_send(data).map_err(|e| e.to_string())?;
+        Ok(())
+    } else {
+        Err("No active terminal session for this container".to_string())
+    }
 }
 
 #[tauri::command]
@@ -681,6 +741,7 @@ fn main() {
 
             Ok(())
         })
+        .manage(TerminalSenders::new(HashMap::new()))
         .invoke_handler(tauri::generate_handler![
             get_containers,
             get_images,
@@ -709,7 +770,8 @@ fn main() {
             inspect_volume,
             inspect_network,
             get_system_info,
-            exec_container
+            exec_container,
+            write_stdin
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

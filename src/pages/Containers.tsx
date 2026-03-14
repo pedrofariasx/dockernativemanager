@@ -13,7 +13,8 @@ import {
   createContainer,
   getContainerLogs,
   Container,
-  execContainer
+  execContainer,
+  writeStdin
 } from "@/lib/docker";
 import { 
   Table,
@@ -47,7 +48,8 @@ import {
   Eye,
   CheckSquare,
   MoreVertical,
-  Copy
+  Copy,
+  X
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -85,6 +87,9 @@ const Containers = () => {
   const [logs, setLogs] = useState("");
   const [showTerminal, setShowTerminal] = useState(false);
   const [inspectData, setInspectData] = useState("");
+  const [terminalShell, setTerminalShell] = useState<"sh" | "bash" | "ash">("sh");
+  const [terminalUser, setTerminalUser] = useState("");
+  const [terminalKey, setTerminalKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newName, setNewName] = useState("");
@@ -255,6 +260,7 @@ const Containers = () => {
   };
 
   return (
+    <div className="h-full p-8">
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
@@ -382,8 +388,8 @@ const Containers = () => {
           setShowTerminal(false);
         }
       }}>
-        <SheetContent side="right" className="w-[600px] sm:w-[800px] bg-background border-border text-foreground">
-          <SheetHeader>
+        <SheetContent side="right" className="w-[80%] sm:w-[80%] sm:max-w-none bg-background border-border text-foreground flex flex-col p-0 gap-0">
+          <SheetHeader className="p-5 border-b border-border shrink-0">
             <SheetTitle className="text-foreground flex items-center gap-2">
               {showTerminal ? <CommandLine className="w-5 h-5 text-amber-500" /> : logs ? <Terminal className="w-5 h-5 text-blue-500" /> : <Eye className="w-5 h-5 text-emerald-500" />}
               {showTerminal ? "Terminal" : logs ? "Logs" : "Inspect"}: {selectedContainer?.name}
@@ -393,11 +399,48 @@ const Containers = () => {
             </SheetDescription>
           </SheetHeader>
           
-          <div className="mt-6 flex-1 min-h-0">
+          <div className="flex-1 overflow-auto p-5 space-y-3">
             {showTerminal && selectedContainer ? (
-              <TerminalComponent containerId={selectedContainer.id} />
+              <div className="flex flex-col h-full space-y-3">
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1 bg-muted rounded-md p-0.5">
+                    {(["sh", "bash", "ash"] as const).map((s) => (
+                      <button
+                        key={s}
+                        onClick={() => { setTerminalShell(s); setTerminalKey((k) => k + 1); }}
+                        className={`px-3 py-1 text-xs rounded font-mono transition-colors ${terminalShell === s ? "bg-blue-600 text-white" : "text-muted-foreground hover:text-foreground"}`}
+                      >
+                        {s}
+                      </button>
+                    ))}
+                  </div>
+                  <Input
+                    placeholder="user (optional)"
+                    value={terminalUser}
+                    onChange={(e) => setTerminalUser(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") setTerminalKey((k) => k + 1); }}
+                    className="h-8 text-xs w-36 bg-muted border-border"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 text-xs"
+                    onClick={() => setTerminalKey((k) => k + 1)}
+                  >
+                    Reconnect
+                  </Button>
+                </div>
+                <div className="flex-1 min-h-0">
+                  <TerminalComponent
+                    key={terminalKey}
+                    containerId={selectedContainer.id}
+                    shell={terminalShell}
+                    user={terminalUser}
+                  />
+                </div>
+              </div>
             ) : (
-              <div className="bg-card rounded-lg p-4 font-mono text-xs overflow-auto max-h-[80vh] whitespace-pre-wrap border border-border">
+              <div className="bg-card rounded-lg p-4 font-mono text-xs overflow-auto whitespace-pre-wrap border border-border h-full">
                 {logs || inspectData}
               </div>
             )}
@@ -477,6 +520,7 @@ const Containers = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
     </div>
   );
 };
@@ -608,25 +652,49 @@ const ContainerRow = ({ container, isSelected, onSelect, handleAction, handleDup
 };
 
 import { useRef } from "react";
+import { useTheme } from "next-themes";
 import { Terminal as XTerm } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
 
-const TerminalComponent = ({ containerId }: { containerId: string }) => {
+const SHELLS = ["sh", "bash", "ash"] as const;
+type ShellType = typeof SHELLS[number];
+
+const TerminalComponent = ({
+  containerId,
+  shell,
+  user,
+}: {
+  containerId: string;
+  shell: ShellType;
+  user: string;
+}) => {
   const terminalRef = useRef<HTMLDivElement>(null);
   const xtermRef = useRef<XTerm | null>(null);
+  const { resolvedTheme } = useTheme();
+
+  useEffect(() => {
+    if (xtermRef.current) {
+      xtermRef.current.options.theme = {
+        background: resolvedTheme === "dark" ? "#09090b" : "#ffffff",
+        foreground: resolvedTheme === "dark" ? "#f8fafc" : "#0f172a",
+        cursor: "#3b82f6",
+      };
+    }
+  }, [resolvedTheme]);
 
   useEffect(() => {
     if (!terminalRef.current) return;
 
     const term = new XTerm({
       theme: {
-        background: "transparent",
-        foreground: "currentColor",
+        background: resolvedTheme === "dark" ? "#09090b" : "#ffffff",
+        foreground: resolvedTheme === "dark" ? "#f8fafc" : "#0f172a",
         cursor: "#3b82f6",
       },
       fontSize: 12,
       fontFamily: "JetBrains Mono, Menlo, Monaco, 'Courier New', monospace",
+      cursorBlink: true,
     });
 
     const fitAddon = new FitAddon();
@@ -635,7 +703,12 @@ const TerminalComponent = ({ containerId }: { containerId: string }) => {
     fitAddon.fit();
     xtermRef.current = term;
 
-    term.writeln("\x1b[34m[*] Connecting to container shell...\x1b[0m");
+    term.writeln(`\x1b[34m[*] Connecting to container shell (${shell})...\x1b[0m`);
+
+    // Send keystrokes to backend stdin
+    const dataDispose = term.onData((data) => {
+      writeStdin(containerId, data).catch(() => {});
+    });
 
     let unlisten: (() => void) | undefined;
 
@@ -645,8 +718,7 @@ const TerminalComponent = ({ containerId }: { containerId: string }) => {
       });
 
       try {
-        // Simple initial command to show the shell is ready
-        await execContainer(containerId, "sh -c 'echo \"Connected to container shell.\"; /bin/sh'");
+        await execContainer(containerId, shell, user || undefined);
       } catch (err) {
         term.writeln(`\r\n\x1b[31m[!] Error: ${err}\x1b[0m`);
       }
@@ -658,14 +730,15 @@ const TerminalComponent = ({ containerId }: { containerId: string }) => {
     window.addEventListener("resize", handleResize);
 
     return () => {
+      dataDispose.dispose();
       if (unlisten) unlisten();
       window.removeEventListener("resize", handleResize);
       term.dispose();
     };
-  }, [containerId]);
+  }, [containerId, shell, user]);
 
   return (
-    <div className="h-[500px] w-full bg-background rounded-lg overflow-hidden border border-border p-2">
+    <div className="h-[460px] w-full bg-background rounded-lg overflow-hidden border border-border p-2">
       <div ref={terminalRef} className="h-full w-full" />
     </div>
   );
