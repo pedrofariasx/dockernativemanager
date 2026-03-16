@@ -108,21 +108,30 @@
   }
 
   #root {
-    @apply relative h-screen w-full overflow-hidden bg-background;
+    @apply relative overflow-hidden bg-background;
+    height: calc(100vh - 40px);
+    width: calc(100vw - 40px);
+    margin: 20px;
     border-radius: 15px !important;
     box-sizing: border-box;
-    transition: border-radius 0.2s ease-in-out;
-    /* Removed explicit border to avoid artifact against dark overlays */
-    /* Instead, we use a subtle inner shadow or let the clipping handle it */
-    box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.05);
+    transition: all 0.2s ease-in-out;
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.35),
+      0 8px 16px rgba(0, 0, 0, 0.25);
   }
 
   .maximized #root {
+    height: 100vh;
+    width: 100vw;
+    margin: 0;
     border-radius: 0 !important;
     box-shadow: none !important;
   }
-
+  
+  /* Tentei deixar parecido com o padrão GNOME (libadwaita/Adwaita), fiquei um pouco paranoico. */
   .dark #root {
-    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+    box-shadow:
+      0 1px 2px rgba(0, 0, 0, 0.35),
+      0 8px 16px rgba(0, 0, 0, 0.25);
   }
 }

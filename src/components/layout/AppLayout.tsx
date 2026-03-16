@@ -63,7 +63,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <div
       id="root-container"
-      className="flex h-screen w-full bg-background overflow-hidden transition-colors duration-300 relative"
+      className="flex h-full w-full bg-background overflow-hidden transition-colors duration-300 relative"
     >
       <Sidebar />
       <main className="flex-1 min-w-0 flex flex-col overflow-hidden relative">
