@@ -88,7 +88,7 @@ const Sidebar = () => {
 
   return (
     <>
-      <div className="w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-screen shrink-0">
+      <div className="w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-full shrink-0">
         <div className="p-6 border-b border-sidebar-border flex items-center gap-3">
           <img src="/dnm-icon.png" alt="DNM Icon" className="w-12 h-12" />
           <div>

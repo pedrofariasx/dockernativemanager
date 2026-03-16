@@ -1,6 +1,6 @@
 [package]
 name = "docker-native-manager"
-version = "1.4.0"
+version = "1.4.1"
 description = "A powerful, native, and cross-platform GUI for managing Docker environments, containers, and stacks."
 authors = ["Pedro Farias"]
 edition = "2021"

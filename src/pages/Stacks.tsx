@@ -74,10 +74,10 @@ import {
   DialogDescription
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
+import Editor from "@monaco-editor/react";
 import {
   Sheet,
   SheetContent,
@@ -1125,14 +1125,28 @@ const Stacks = () => {
             </div>
             <div className="space-y-2">
               <Label htmlFor="compose">docker-compose.yaml</Label>
-              <Textarea 
-                id="compose"
-                placeholder="version: '3'..." 
-                className="bg-card border-border text-foreground font-mono text-xs min-h-[300px]"
-                value={composeContent}
-                onChange={(e) => setComposeContent(e.target.value)}
-                disabled={isDeploying}
-              />
+              <div className="rounded-md border border-border overflow-hidden">
+                <Editor
+                  height="400px"
+                  defaultLanguage="yaml"
+                  theme="vs-dark"
+                  value={composeContent}
+                  onChange={(value) => setComposeContent(value || "")}
+                  options={{
+                    minimap: { enabled: false },
+                    fontSize: 12,
+                    lineNumbers: "on",
+                    scrollBeyondLastLine: false,
+                    automaticLayout: true,
+                    tabSize: 2,
+                    formatOnPaste: true,
+                    formatOnType: true,
+                    wordWrap: "on",
+                    readOnly: isDeploying,
+                    padding: { top: 10, bottom: 10 }
+                  }}
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
