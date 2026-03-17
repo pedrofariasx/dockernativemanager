@@ -16,6 +16,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate tag version matches app version
+        run: |
+          TAG_VERSION="${{ github.ref_name }}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          APP_VERSION="$(jq -r '.version' src-tauri/tauri.conf.json)"
+
+          if [ -z "$APP_VERSION" ] || [ "$APP_VERSION" = "null" ]; then
+            echo "Could not read app version from src-tauri/tauri.conf.json"
+            exit 1
+          fi
+
+          if [ "$TAG_VERSION" != "$APP_VERSION" ]; then
+            echo "Tag version ($TAG_VERSION) does not match app version ($APP_VERSION)."
+            exit 1
+          fi
+
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
