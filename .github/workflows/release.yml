@@ -58,6 +58,43 @@ jobs:
         run: |
           mkdir -p dist-arch
 
+          ARCH_DEPENDS=('cairo' 'gdk-pixbuf2' 'glib2' 'gtk3' 'hicolor-icon-theme' 'libsoup3' 'webkit2gtk-4.1')
+
+          map_deb_to_arch_dep() {
+            case "$1" in
+              libgtk-3-0) echo "gtk3" ;;
+              libwebkit2gtk-4.1-0) echo "webkit2gtk-4.1" ;;
+              libglib2.0-0) echo "glib2" ;;
+              libgdk-pixbuf-2.0-0) echo "gdk-pixbuf2" ;;
+              libsoup-3.0-0) echo "libsoup3" ;;
+              librsvg2-2) echo "librsvg" ;;
+              libcairo2) echo "cairo" ;;
+              *) echo "" ;;
+            esac
+          }
+
+          DEB_DEPENDS=$(node -e "const fs = require('fs'); const config = JSON.parse(fs.readFileSync('src-tauri/tauri.conf.json', 'utf8')); const deps = config.bundle?.linux?.deb?.depends ?? []; console.log(deps.join('\n'));")
+
+          if [ -n "$DEB_DEPENDS" ]; then
+            while IFS= read -r dep; do
+              [ -z "$dep" ] && continue
+              DEP_NAME=$(echo "$dep" | sed -E 's/\s*\(.*\)//' | xargs)
+              MAPPED_DEP=$(map_deb_to_arch_dep "$DEP_NAME")
+
+              if [ -z "$MAPPED_DEP" ]; then
+                echo "Debian dependency '$DEP_NAME' is not mapped for Arch Linux packaging."
+                echo "Add a mapping in .github/workflows/release.yml (map_deb_to_arch_dep)."
+                exit 1
+              fi
+
+              if ! printf '%s\n' "${ARCH_DEPENDS[@]}" | grep -qx "$MAPPED_DEP"; then
+                ARCH_DEPENDS+=("$MAPPED_DEP")
+              fi
+            done <<< "$DEB_DEPENDS"
+          fi
+
+          ARCH_DEPENDS_PKGBUILD=$(printf "'%s' " "${ARCH_DEPENDS[@]}")
+
           PKG_VERSION="${{ github.ref_name }}"
           PKG_VERSION="${PKG_VERSION#v}"
           PKG_VERSION="${PKG_VERSION//-/.}"
@@ -88,7 +125,7 @@ jobs:
           arch=('x86_64')
           url="https://github.com/pedrofariasx/dockernativemanager"
           license=('MIT')
-          depends=('cairo' 'gdk-pixbuf2' 'glib2' 'gtk3' 'hicolor-icon-theme' 'libsoup3' 'webkit2gtk-4.1')
+          depends=(${ARCH_DEPENDS_PKGBUILD})
           options=('!strip')
           source=('docker-native-manager'
                   'icon.png'

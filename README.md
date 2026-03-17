@@ -52,6 +52,19 @@ sudo pacman -U ./docker-native-manager-x.y.z-x86_64.pkg.tar.zst
 chmod +x docker-native-manager-x.y.z-x86_64.AppImage && ./docker-native-manager-x.y.z-x86_64.AppImage
 ```
 
+### Automatic release artifacts (GitHub Releases)
+
+For `v*` tags, the release workflow publishes Linux artifacts automatically:
+
+- AppImage
+- `.deb`
+- `.rpm`
+- `.tar.gz`
+- Arch Linux `.pkg.tar.zst`
+
+Arch package dependencies start with a base list and are automatically extended from `src-tauri/tauri.conf.json` (`bundle.linux.deb.depends`) when mappings exist in `.github/workflows/release.yml`.  
+If a new Debian dependency has no Arch mapping yet, the pipeline fails with a clear message so the mapping can be added.
+
 ### Manual Installation
 
 1. Clone the repository:
