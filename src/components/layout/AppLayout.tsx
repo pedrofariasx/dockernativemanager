@@ -74,13 +74,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
           data-tauri-drag-region
           className="h-12 border-b border-border/50 bg-background/50 flex items-center justify-between px-4 select-none shrink-0 cursor-default backdrop-blur-md"
           onDoubleClick={async () => {
-            await getCurrentWindow().toggleMaximize();
+            await getCurrentWindow()[isMaximized ? 'unmaximize' : 'maximize']();
           }}
           onPointerDown={async (e) => {
             // Only drag on left click and avoid triggering on buttons
             if (e.buttons === 1 && (e.target as HTMLElement).closest('button') === null) {
               try {
-                await getCurrentWindow().startDragging();
+                await getCurrentWindow()[isMaximized ? 'unmaximize' : 'maximize']();
               } catch (err) {
                 console.error("Failed to start dragging", err);
               }
