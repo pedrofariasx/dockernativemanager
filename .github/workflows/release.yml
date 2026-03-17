@@ -45,15 +45,14 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          args: --bundles deb,rpm
           tagName: ${{ github.ref_name }}
           releaseName: "Docker Native Manager ${{ github.ref_name }}"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: false
           prerelease: false
 
-      - name: Package for Arch Linux and Upload
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Package for Arch Linux
         run: |
           mkdir -p dist-arch
 
@@ -116,4 +115,10 @@ jobs:
 
 
           ARCH_PKG=$(ls dist-arch/*.pkg.tar.zst)
-          gh release upload "${{ github.ref_name }}" "$ARCH_PKG" --clobber
+          echo "ARCH_PKG=$ARCH_PKG" >> "$GITHUB_ENV"
+
+      - name: Upload Arch package to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          files: ${{ env.ARCH_PKG }}

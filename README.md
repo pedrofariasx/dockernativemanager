@@ -80,6 +80,11 @@ pnpm tauri build
 
 The resulting binaries will be placed in the `src-tauri/target/release/bundle` directory.
 
+When a tag matching `v*` is pushed, the GitHub Actions release workflow publishes Linux packages for:
+- `.deb` (Debian/Ubuntu)
+- `.rpm` (Fedora/openSUSE)
+- `.pkg.tar.zst` (Arch Linux)
+
 ## 🛠️ Technologies Used
 
 - **Frontend**:
