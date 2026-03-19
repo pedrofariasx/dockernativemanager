@@ -103,3 +103,43 @@ pub struct SystemInfo {
     pub ncpu: i64,
     pub mem_total: i64,
 }
+
+#[derive(Serialize)]
+pub struct SwarmInfo {
+    pub id: String,
+    pub created_at: String,
+    pub updated_at: String,
+    pub nodes: usize,
+    pub managers: usize,
+    pub is_manager: bool,
+}
+
+#[derive(Serialize)]
+pub struct NodeInfo {
+    pub id: String,
+    pub hostname: String,
+    pub role: String,
+    pub status: String,
+    pub availability: String,
+    pub ip_address: String,
+    pub engine_version: String,
+}
+
+#[derive(Serialize)]
+pub struct ServiceInfo {
+    pub id: String,
+    pub name: String,
+    pub image: String,
+    pub replicas: String, // format "running/total"
+    pub ports: String,
+    pub updated_at: String,
+    pub stack: String,
+}
+
+#[derive(Serialize)]
+pub struct DockerContextInfo {
+    pub name: String,
+    pub description: String,
+    pub docker_endpoint: String,
+    pub is_active: bool,
+}

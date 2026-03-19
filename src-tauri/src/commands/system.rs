@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-17
  * 
- * Last Modified: Tue Mar 17 2026
+ * Last Modified: Thu Mar 19 2026
  * Modified By: Pedro Farias
  * 
  */
@@ -89,4 +89,79 @@ pub async fn manage_docker_service(action: String) -> Result<String, String> {
     }
 
     Ok(format!("Docker service {}ed successfully", action))
+}
+
+#[tauri::command]
+pub async fn list_docker_contexts() -> Result<Vec<crate::models::DockerContextInfo>, String> {
+    let output = std::process::Command::new("docker")
+        .args(["context", "ls", "--format", "{{json .}}"])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let mut contexts = Vec::new();
+
+    for line in stdout.lines() {
+        if line.trim().is_empty() { continue; }
+        let v: serde_json::Value = serde_json::from_str(line).map_err(|e| e.to_string())?;
+        
+        contexts.push(crate::models::DockerContextInfo {
+            name: v["Name"].as_str().unwrap_or_default().to_string(),
+            description: v["Description"].as_str().unwrap_or_default().to_string(),
+            docker_endpoint: v["DockerEndpoint"].as_str().unwrap_or_default().to_string(),
+            is_active: v["Current"].as_bool().unwrap_or(false),
+        });
+    }
+
+    Ok(contexts)
+}
+
+#[tauri::command]
+pub async fn use_docker_context(name: String) -> Result<(), String> {
+    let output = std::process::Command::new("docker")
+        .args(["context", "use", &name])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn create_docker_context(name: String, host: String) -> Result<(), String> {
+    let output = std::process::Command::new("docker")
+        .args(["context", "create", &name, "--docker", &format!("host={}", host)])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn remove_docker_context(name: String) -> Result<(), String> {
+    if name == "default" {
+        return Err("Cannot remove default context".to_string());
+    }
+
+    let output = std::process::Command::new("docker")
+        .args(["context", "rm", &name])
+        .output()
+        .map_err(|e| e.to_string())?;
+
+    if !output.status.success() {
+        return Err(String::from_utf8_lossy(&output.stderr).to_string());
+    }
+
+    Ok(())
 }

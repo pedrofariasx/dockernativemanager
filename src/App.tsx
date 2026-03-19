@@ -10,8 +10,9 @@ import Stacks from "./pages/Stacks";
 import Images from "./pages/Images";
 import Volumes from "./pages/Volumes";
 import Networks from "./pages/Networks";
+import Swarm from "./pages/Swarm";
 import AppLayout from "./components/layout/AppLayout";
-import { DockerProvider } from "./context/DockerContext";
+import { DockerProvider } from "@/context/DockerContext";
 
 const queryClient = new QueryClient();
 
@@ -30,6 +31,7 @@ const App = () => (
               <Route path="/images" element={<Images />} />
               <Route path="/volumes" element={<Volumes />} />
               <Route path="/networks" element={<Networks />} />
+              <Route path="/swarm" element={<Swarm />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </AppLayout>

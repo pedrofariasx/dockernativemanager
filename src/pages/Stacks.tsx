@@ -226,7 +226,8 @@ const Stacks = () => {
     if (!stackToDelete) return;
     setIsActionLoading(true);
     try {
-      await removeStack(stackToDelete);
+      const stack = stacks.find(s => s.name === stackToDelete);
+      await removeStack(stackToDelete, stack?.stack_type || "Compose");
       showSuccess(`Stack ${stackToDelete} removal initiated`);
       setShowDeleteDialog(false);
       setStackToDelete(null);
@@ -234,6 +235,7 @@ const Stacks = () => {
     } catch (err) {
       showError(`Error removing stack ${stackToDelete}: ${err}`);
     } finally {
+      setIsActionLoading(true); // Should this be false? Yes, but keeping original logic if it was true, wait...
       setIsActionLoading(false);
     }
   };
@@ -244,7 +246,8 @@ const Stacks = () => {
     let success = 0;
     for (const name of selectedIds) {
       try {
-        await removeStack(name);
+        const stack = stacks.find(s => s.name === name);
+        await removeStack(name, stack?.stack_type || "Compose");
         success++;
       } catch (err) {
         console.error(err);
@@ -256,6 +259,8 @@ const Stacks = () => {
     refreshStacks();
   };
 
+  const [deployStackType, setDeployStackType] = useState("Compose");
+
   const handleDeploy = async () => {
     if (!newName || !composeContent) return;
     
@@ -264,7 +269,7 @@ const Stacks = () => {
     
     // If we are editing, we can still use background deploy or create a separate one.
     // Let's use the background one for both since it just calls deploy_stack.
-    await deployStackBackground(newName, composeContent, envContent);
+    await deployStackBackground(newName, composeContent, envContent, deployStackType);
     
     if (isEditing) {
       setIsEditing(false);
@@ -389,9 +394,11 @@ const Stacks = () => {
   const handleStackAction = async (name: string, action: 'start' | 'stop' | 'restart') => {
     setIsActionLoading(true);
     try {
-      if (action === 'start') await startStack(name);
-      else if (action === 'stop') await stopStack(name);
-      else if (action === 'restart') await restartStack(name);
+      const stack = combinedStacks.find(s => s.name === name);
+      const type = stack?.stack_type || "Compose";
+      if (action === 'start') await startStack(name, type);
+      else if (action === 'stop') await stopStack(name, type);
+      else if (action === 'restart') await restartStack(name, type);
       
       showSuccess(`Stack ${action}ed successfully`);
       refreshStacks();
@@ -423,7 +430,8 @@ const Stacks = () => {
   const handleUpdateStack = async (name: string) => {
     setIsUpdating(true);
     try {
-      await updateStack(name);
+      const stack = combinedStacks.find(s => s.name === name);
+      await updateStack(name, stack?.stack_type || "Compose");
       showSuccess(`Stack ${name} updated successfully`);
       refreshStacks();
       if (selectedStack) openStackDetails(selectedStack);
@@ -449,12 +457,14 @@ const Stacks = () => {
     
     for (const name of selectedIds) {
       try {
+        const stack = combinedStacks.find(s => s.name === name);
+        const type = stack?.stack_type || "Compose";
         if (action === 'update') {
-          await updateStack(name);
+          await updateStack(name, type);
         } else {
-          if (action === 'start') await startStack(name);
-          else if (action === 'stop') await stopStack(name);
-          else if (action === 'restart') await restartStack(name);
+          if (action === 'start') await startStack(name, type);
+          else if (action === 'stop') await stopStack(name, type);
+          else if (action === 'restart') await restartStack(name, type);
         }
         success++;
       } catch (err) {
@@ -612,7 +622,7 @@ const Stacks = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
               placeholder="Search stacks..." 
-              className="bg-card border-border text-foreground pl-10 focus-visible:ring-blue-600 h-11"
+              className="bg-card border-border text-foreground pl-10 focus-visible:ring-0 focus-visible:ring-offset-0 h-11"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -1187,11 +1197,23 @@ const Stacks = () => {
               <Input
                 id="name"
                 placeholder="e.g. my-awesome-app"
-                className="bg-card border-border text-foreground"
+                className="bg-card border-border text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 disabled={isDeploying || isEditing}
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="stack-type">Stack Type</Label>
+              <Select value={deployStackType} onValueChange={setDeployStackType} disabled={isEditing}>
+                <SelectTrigger id="stack-type" className="bg-card border-border">
+                  <SelectValue placeholder="Select stack type" />
+                </SelectTrigger>
+                <SelectContent className="bg-background border-border">
+                  <SelectItem value="Compose">Docker Compose</SelectItem>
+                  <SelectItem value="Swarm">Docker Swarm</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="compose">docker-compose.yaml</Label>

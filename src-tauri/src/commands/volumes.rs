@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-17
  * 
- * Last Modified: Tue Mar 17 2026
+ * Last Modified: Thu Mar 19 2026
  * Modified By: Pedro Farias
  * 
  */
@@ -25,7 +25,7 @@ pub async fn get_volumes() -> Result<Vec<VolumeInfo>, String> {
             name: v.name,
             driver: v.driver,
             mountpoint: v.mountpoint,
-            created_at: v.created_at.unwrap_or_default(),
+            created_at: v.created_at.map(|t| t.to_string()).unwrap_or_default(),
             labels: v.labels,
             size: usage.as_ref().map(|u| u.size).unwrap_or(-1),
             usage_count: usage.as_ref().map(|u| u.ref_count).unwrap_or(-1),

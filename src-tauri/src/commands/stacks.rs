@@ -73,7 +73,7 @@ pub async fn get_stacks() -> Result<Vec<StackInfo>, String> {
 }
 
 #[tauri::command]
-pub async fn deploy_stack(app: AppHandle, name: String, compose_content: String, env_content: Option<String>) -> Result<(), String> {
+pub async fn deploy_stack(app: AppHandle, name: String, compose_content: String, env_content: Option<String>, stack_type: String) -> Result<(), String> {
     use std::io::Write;
     use tauri::Manager;
     use uuid::Uuid;
@@ -88,32 +88,42 @@ pub async fn deploy_stack(app: AppHandle, name: String, compose_content: String,
     file.write_all(compose_content.as_bytes()).map_err(|e| e.to_string())?;
 
     let mut cmd = std::process::Command::new("docker");
-    cmd.arg("compose")
-        .arg("-p")
-        .arg(&name)
-        .arg("-f")
-        .arg(&compose_file);
+    
+    if stack_type == "Swarm" {
+        cmd.arg("stack").arg("deploy").arg("-c").arg(&compose_file).arg(&name);
+    } else {
+        cmd.arg("compose")
+            .arg("-p")
+            .arg(&name)
+            .arg("-f")
+            .arg(&compose_file);
 
-    let mut temp_env_file: Option<std::path::PathBuf> = None;
-    if let Some(env_c) = env_content {
-        let env_filename = format!(".env.{}", Uuid::new_v4());
-        let env_file_path = stacks_dir.join(env_filename);
-        let mut env_file = std::fs::File::create(&env_file_path).map_err(|e| e.to_string())?;
-        env_file.write_all(env_c.as_bytes()).map_err(|e| e.to_string())?;
-        cmd.arg("--env-file").arg(&env_file_path);
-        temp_env_file = Some(env_file_path);
+        let mut temp_env_file: Option<std::path::PathBuf> = None;
+        if let Some(env_c) = env_content {
+            let env_filename = format!(".env.{}", Uuid::new_v4());
+            let env_file_path = stacks_dir.join(env_filename);
+            let mut env_file = std::fs::File::create(&env_file_path).map_err(|e| e.to_string())?;
+            env_file.write_all(env_c.as_bytes()).map_err(|e| e.to_string())?;
+            cmd.arg("--env-file").arg(&env_file_path);
+            temp_env_file = Some(env_file_path);
+        }
+
+        cmd.arg("up").arg("-d");
+
+        let output = cmd.output().map_err(|e| e.to_string())?;
+
+        // Clean up temporary .env file
+        if let Some(path) = temp_env_file {
+            let _ = std::fs::remove_file(path);
+        }
+
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+        return Ok(());
     }
 
-    let output = cmd
-        .arg("up")
-        .arg("-d")
-        .output()
-        .map_err(|e| e.to_string())?;
-
-    // Clean up temporary .env file
-    if let Some(path) = temp_env_file {
-        let _ = std::fs::remove_file(path);
-    }
+    let output = cmd.output().map_err(|e| e.to_string())?;
 
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
@@ -123,14 +133,15 @@ pub async fn deploy_stack(app: AppHandle, name: String, compose_content: String,
 }
 
 #[tauri::command]
-pub async fn remove_stack(name: String) -> Result<(), String> {
-    let output = std::process::Command::new("docker")
-        .arg("compose")
-        .arg("-p")
-        .arg(&name)
-        .arg("down")
-        .output()
-        .map_err(|e| e.to_string())?;
+pub async fn remove_stack(name: String, stack_type: String) -> Result<(), String> {
+    let mut cmd = std::process::Command::new("docker");
+    if stack_type == "Swarm" {
+        cmd.arg("stack").arg("rm").arg(&name);
+    } else {
+        cmd.arg("compose").arg("-p").arg(&name).arg("down");
+    }
+    
+    let output = cmd.output().map_err(|e| e.to_string())?;
 
     if !output.status.success() {
         return Err(String::from_utf8_lossy(&output.stderr).to_string());
@@ -140,7 +151,10 @@ pub async fn remove_stack(name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn stop_stack(name: String) -> Result<(), String> {
+pub async fn stop_stack(name: String, stack_type: String) -> Result<(), String> {
+    if stack_type == "Swarm" {
+        return Err("Stopping a Swarm stack is not directly supported. Scale services to 0 instead.".into());
+    }
     let output = std::process::Command::new("docker")
         .arg("compose")
         .arg("-p")
@@ -156,7 +170,35 @@ pub async fn stop_stack(name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn start_stack(app: AppHandle, name: String) -> Result<(), String> {
+pub async fn start_stack(app: AppHandle, name: String, stack_type: String) -> Result<(), String> {
+    if stack_type == "Swarm" {
+        // For swarm, starting usually means redeploying if it was removed, 
+        // but if it's just "scaled to 0", we'd need to know which services.
+        // For now, let's just support redeploying if we have the file.
+        use tauri::Manager;
+        let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
+        let stacks_dir = app_dir.join("stacks");
+        let compose_file = stacks_dir.join(format!("compose-{}.yaml", name));
+        
+        if compose_file.exists() {
+            let output = std::process::Command::new("docker")
+                .arg("stack")
+                .arg("deploy")
+                .arg("-c")
+                .arg(&compose_file)
+                .arg(&name)
+                .output()
+                .map_err(|e| e.to_string())?;
+            
+            if !output.status.success() {
+                return Err(String::from_utf8_lossy(&output.stderr).to_string());
+            }
+            return Ok(());
+        } else {
+            return Err("Compose file not found for Swarm stack. Cannot restart.".into());
+        }
+    }
+
     use tauri::Manager;
     let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
     let stacks_dir = app_dir.join("stacks");
@@ -180,7 +222,12 @@ pub async fn start_stack(app: AppHandle, name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn restart_stack(name: String) -> Result<(), String> {
+pub async fn restart_stack(name: String, stack_type: String) -> Result<(), String> {
+    if stack_type == "Swarm" {
+        // Restarting a swarm stack is usually done service by service with --force
+        // or by redeploying. Let's return an error for now as it's complex.
+        return Err("Restarting a Swarm stack is not directly supported. Use 'Update' or restart individual services.".into());
+    }
     let output = std::process::Command::new("docker")
         .arg("compose")
         .arg("-p")
@@ -196,7 +243,7 @@ pub async fn restart_stack(name: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn update_stack(app: AppHandle, name: String) -> Result<(), String> {
+pub async fn update_stack(app: AppHandle, name: String, stack_type: String) -> Result<(), String> {
     use tauri::Manager;
     let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
     let stacks_dir = app_dir.join("stacks");
@@ -204,6 +251,24 @@ pub async fn update_stack(app: AppHandle, name: String) -> Result<(), String> {
 
     if !compose_file.exists() {
         return Err("Compose file not found. Cannot update stack created outside this app.".into());
+    }
+
+    if stack_type == "Swarm" {
+        // For swarm, update is just redeploying with latest images (if images are pulled)
+        // Note: docker stack deploy --resolve-image=always is often used
+        let output = std::process::Command::new("docker")
+            .arg("stack")
+            .arg("deploy")
+            .arg("-c")
+            .arg(&compose_file)
+            .arg(&name)
+            .output()
+            .map_err(|e| e.to_string())?;
+        
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+        return Ok(());
     }
 
     // Pull latest images

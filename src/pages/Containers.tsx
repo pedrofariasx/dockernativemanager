@@ -536,7 +536,7 @@ const Containers = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Filter containers by name or image..."
-            className="bg-card border-border text-foreground pl-10 focus-visible:ring-blue-600 h-11"
+            className="bg-card border-border text-foreground pl-10 h-11 focus-visible:ring-0 focus-visible:ring-offset-0"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -923,7 +923,7 @@ const Containers = () => {
               <Input
                 id="image"
                 placeholder="e.g. nginx:latest"
-                className="bg-card border-border text-foreground"
+                className="bg-card border-border text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                 value={newImage}
                 onChange={(e) => setNewImage(e.target.value)}
                 disabled={isCreating}
@@ -934,7 +934,7 @@ const Containers = () => {
               <Input
                 id="name"
                 placeholder="e.g. my-web-app"
-                className="bg-card border-border text-foreground"
+                className="bg-card border-border text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                 value={newName}
                 onChange={(e) => setNewName(e.target.value)}
                 disabled={isCreating}
@@ -945,7 +945,7 @@ const Containers = () => {
               <Input
                 id="ports"
                 placeholder="e.g. 8080:80, 3000:3000"
-                className="bg-card border-border text-foreground"
+                className="bg-card border-border text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                 value={newPorts}
                 onChange={(e) => setNewPorts(e.target.value)}
                 disabled={isCreating}
@@ -956,7 +956,7 @@ const Containers = () => {
               <Textarea
                 id="envs"
                 placeholder="NODE_ENV=production&#10;API_KEY=secret"
-                className="bg-card border-border text-foreground min-h-[80px]"
+                className="bg-card border-border text-foreground min-h-[80px] focus-visible:ring-0 focus-visible:ring-offset-0"
                 value={newEnvs}
                 onChange={(e) => setNewEnvs(e.target.value)}
                 disabled={isCreating}
@@ -967,7 +967,7 @@ const Containers = () => {
               <Textarea
                 id="volumes"
                 placeholder="/path/on/host:/path/in/container"
-                className="bg-card border-border text-foreground min-h-[80px]"
+                className="bg-card border-border text-foreground min-h-[80px] focus-visible:ring-0 focus-visible:ring-offset-0"
                 value={newVolumes}
                 onChange={(e) => setNewVolumes(e.target.value)}
                 disabled={isCreating}

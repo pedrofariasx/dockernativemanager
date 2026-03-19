@@ -4,7 +4,7 @@
  * Created: 2026-03-14
  * Author: Pedro Farias
  * 
- * Last Modified: Tue Mar 17 2026
+ * Last Modified: Thu Mar 19 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -76,7 +76,7 @@ interface DockerContextType {
   pullingImages: Record<string, { status: string; progress: number | null }>;
   pullImageBackground: (imageName: string) => Promise<void>;
   deployingStacks: Record<string, { status: string }>;
-  deployStackBackground: (name: string, composeContent: string, envContent: string | null) => Promise<void>;
+  deployStackBackground: (name: string, composeContent: string, envContent: string | null, stackType?: string) => Promise<void>;
   manageService: (action: 'start' | 'stop' | 'restart' | 'reconnect') => Promise<void>;
 }
 
@@ -254,7 +254,7 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [pullingImages, refreshImages]);
 
-  const deployStackBackground = useCallback(async (name: string, composeContent: string, envContent: string | null) => {
+  const deployStackBackground = useCallback(async (name: string, composeContent: string, envContent: string | null, stackType: string = "Compose") => {
     if (deployingStacks[name]) return;
 
     setDeployingStacks(prev => ({
@@ -263,7 +263,7 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }));
 
     try {
-      await deployStack(name, composeContent, envContent);
+      await deployStack(name, composeContent, envContent, stackType);
       showSuccess(`Stack ${name} deployed successfully`);
       refreshStacks();
     } catch (err) {

@@ -4,7 +4,7 @@
  * Created: 2026-03-13
  * Author: Pedro Farias
  * 
- * Last Modified: Tue Mar 17 2026
+ * Last Modified: Thu Mar 19 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -338,7 +338,7 @@ const Images = () => {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
               placeholder="Search images by name, tag or ID..." 
-              className="bg-card border-border text-foreground pl-10 focus-visible:ring-blue-600 h-11"
+              className="bg-card border-border text-foreground pl-10 focus-visible:ring-0 focus-visible:ring-offset-0 h-11"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -563,7 +563,7 @@ const Images = () => {
           <div className="py-4 space-y-4">
             <Input
               placeholder="e.g. nginx:latest or ubuntu"
-              className="bg-card border-border text-foreground"
+              className="bg-card border-border text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
               value={pullImageUrl}
               onChange={(e) => setPullImageUrl(e.target.value)}
               disabled={Object.keys(pullingImages).some(name => name === (pullImageUrl.includes(':') ? pullImageUrl : `${pullImageUrl}:latest`))}
@@ -615,7 +615,7 @@ const Images = () => {
               <Input
                 id="containerName"
                 placeholder="e.g. my-nginx-container"
-                className="bg-card border-border text-foreground"
+                className="bg-card border-border text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                 value={containerName}
                 onChange={(e) => setContainerName(e.target.value)}
               />
@@ -625,7 +625,7 @@ const Images = () => {
               <Input
                 id="containerPorts"
                 placeholder="HostPort:ContainerPort, ..."
-                className="bg-card border-border text-foreground"
+                className="bg-card border-border text-foreground focus-visible:ring-0 focus-visible:ring-offset-0"
                 value={containerPorts}
                 onChange={(e) => setContainerPorts(e.target.value)}
               />
@@ -636,7 +636,7 @@ const Images = () => {
                 id="containerEnvs"
                 rows={3}
                 placeholder="KEY=VALUE"
-                className="flex h-auto w-full rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-auto w-full rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50 "
                 value={containerEnvs}
                 onChange={(e) => setContainerEnvs(e.target.value)}
               />
@@ -647,7 +647,7 @@ const Images = () => {
                 id="containerVolumes"
                 rows={3}
                 placeholder="/host/path:/container/path"
-                className="flex h-auto w-full rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex h-auto w-full rounded-md border border-input bg-card px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-not-allowed disabled:opacity-50"
                 value={containerVolumes}
                 onChange={(e) => setContainerVolumes(e.target.value)}
               />

@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-13
  * 
- * Last Modified: Tue Mar 17 2026
+ * Last Modified: Thu Mar 19 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -26,6 +26,7 @@ use commands::volumes::*;
 use commands::networks::*;
 use commands::stacks::*;
 use commands::system::*;
+use commands::swarm::*;
 use tasks::{listen_to_docker_events, emit_container_stats, emit_host_stats};
 
 fn main() {
@@ -94,7 +95,18 @@ fn main() {
             start_stack,
             stop_stack,
             restart_stack,
-            manage_docker_service
+            manage_docker_service,
+            get_swarm_info,
+            list_nodes,
+            list_services,
+            inspect_service,
+            inspect_node,
+            init_swarm,
+            leave_swarm,
+            list_docker_contexts,
+            use_docker_context,
+            create_docker_context,
+            remove_docker_context
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
