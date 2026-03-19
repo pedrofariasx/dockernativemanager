@@ -93,7 +93,8 @@ jobs:
                 gcc-libs
 
               useradd -m builduser
-              echo 'builduser ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers
+              echo 'builduser ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builduser
+              chmod 440 /etc/sudoers.d/builduser
               chown -R builduser:builduser /repo
 
               su - builduser -c '
