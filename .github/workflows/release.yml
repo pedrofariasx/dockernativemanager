@@ -75,7 +75,7 @@ jobs:
         run: |
           mkdir -p dist-arch
 
-          ARCH_DEPENDS=('cairo' 'gdk-pixbuf2' 'glib2' 'gtk3' 'hicolor-icon-theme' 'libsoup3' 'webkit2gtk-4.1')
+          ARCH_DEPENDS=('cairo' 'gdk-pixbuf2' 'glib2' 'gtk3' 'gtk' 'hicolor-icon-theme' 'libsoup3' 'webkit2gtk-4.1' 'gcc-libs')
           declare -A ARCH_DEPENDS_SET
           for dep in "${ARCH_DEPENDS[@]}"; do
             ARCH_DEPENDS_SET["$dep"]=1
