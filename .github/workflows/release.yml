@@ -16,6 +16,22 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Validate tag version matches app version
+        run: |
+          TAG_VERSION="${{ github.ref_name }}"
+          TAG_VERSION="${TAG_VERSION#v}"
+          APP_VERSION="$(jq -r '.version' src-tauri/tauri.conf.json)"
+
+          if [ -z "$APP_VERSION" ] || [ "$APP_VERSION" = "null" ]; then
+            echo "Could not read app version from src-tauri/tauri.conf.json"
+            exit 1
+          fi
+
+          if [ "$TAG_VERSION" != "$APP_VERSION" ]; then
+            echo "Tag version ($TAG_VERSION) does not match app version ($APP_VERSION)."
+            exit 1
+          fi
+
       - name: Install pnpm
         uses: pnpm/action-setup@v3
         with:
@@ -38,20 +54,23 @@ jobs:
             librsvg2-dev patchelf libssl-dev pkg-config fakeroot
 
       - name: Install frontend dependencies
-        run: pnpm install
+        run: |
+          export CI=true
+          pnpm install
 
       - name: Build and Package Tauri App
         uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          args: --bundles appimage,deb,rpm
           tagName: ${{ github.ref_name }}
           releaseName: "Docker Native Manager ${{ github.ref_name }}"
           releaseBody: "See the assets to download this version and install."
           releaseDraft: false
           prerelease: false
 
-      - name: Package for Arch Linux and Upload
+      - name: Build & Package for Arch Linux
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -61,59 +80,118 @@ jobs:
           PKG_VERSION="${PKG_VERSION#v}"
           PKG_VERSION="${PKG_VERSION//-/.}"
 
-
-          cp src-tauri/target/release/docker-native-manager dist-arch/
-          cp src-tauri/icons/icon.png dist-arch/
-
-          cat > dist-arch/docker-native-manager.desktop << 'DESKTOP'
-          [Desktop Entry]
-          Name=Docker Native Manager
-          Exec=docker-native-manager
-          Icon=docker-native-manager
-          Type=Application
-          Categories=Development;
-          DESKTOP
-
-
-          cat > dist-arch/PKGBUILD << EOF
-          pkgname=dockernativemanager-bin
-          pkgver=${PKG_VERSION}
-          pkgrel=1
-          pkgdesc="A powerful, native, and cross-platform GUI for managing Docker environments"
-          arch=('x86_64')
-          url="https://github.com/pedrofariasx/dockernativemanager"
-          license=('MIT')
-          depends=('cairo' 'gdk-pixbuf2' 'glib2' 'gtk3' 'hicolor-icon-theme' 'libsoup3' 'webkit2gtk-4.1')
-          options=('!strip')
-          source=('docker-native-manager'
-          'icon.png'
-          'docker-native-manager.desktop')
-          sha256sums=('SKIP' 'SKIP' 'SKIP')
-
-          package() {
-          install -Dm755 "\${srcdir}/docker-native-manager" \\
-                 "\${pkgdir}/usr/bin/docker-native-manager"
-          install -Dm644 "\${srcdir}/icon.png" \\
-                 "\${pkgdir}/usr/share/icons/hicolor/256x256/apps/docker-native-manager.png"
-          install -Dm644 "\${srcdir}/docker-native-manager.desktop" \\
-                 "\${pkgdir}/usr/share/applications/docker-native-manager.desktop"
-
-
-          }
-          EOF
-
-
           docker run --rm \
-            -v "$PWD/dist-arch:/build" \
-            -w /build \
+            -v "$PWD:/repo" \
+            -w /repo \
             archlinux:base-devel bash -c "
-              pacman -Syu --noconfirm &&
-              useradd -m builduser &&
-              echo 'builduser ALL=(ALL) NOPASSWD: ALL' >> /etc/sudoers &&
-              chown -R builduser:builduser /build &&
-              su - builduser -c 'cd /build && makepkg -s --noconfirm'
-            "
 
+              set -e
+
+              pacman -Syu --noconfirm
+
+              pacman -Sy --noconfirm \
+                git base-devel rust nodejs pnpm \
+                cairo gdk-pixbuf2 glib2 gtk3 \
+                hicolor-icon-theme libsoup3 webkit2gtk-4.1 \
+                gcc-libs
+
+              useradd -m builduser
+              echo 'builduser ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/builduser
+              chmod 440 /etc/sudoers.d/builduser
+              chown -R builduser:builduser /repo
+
+              su - builduser -c '
+                set -e
+                cd /repo
+
+                export CI=true
+
+                pnpm install --no-frozen-lockfile
+                pnpm tauri build
+
+                mkdir -p dist-arch
+
+                cp src-tauri/target/release/docker-native-manager dist-arch/
+                cp src-tauri/icons/icon.png dist-arch/
+                cp LICENSE dist-arch/
+
+                printf \"%s\n\" \
+                  \"[Desktop Entry]\" \
+                  \"Name=Docker Native Manager\" \
+                  \"Exec=docker-native-manager\" \
+                  \"Icon=docker-native-manager\" \
+                  \"Type=Application\" \
+                  \"Categories=Development;\" \
+                  > dist-arch/docker-native-manager.desktop
+
+                printf \"%s\n\" \
+                  \"pkgname=docker-native-manager-bin\" \
+                  \"pkgver=${PKG_VERSION}\" \
+                  \"pkgrel=1\" \
+                  \"pkgdesc=\\\"A powerful, native GUI for managing Docker environments\\\"\" \
+                  \"arch=('x86_64')\" \
+                  \"url=\\\"https://github.com/pedrofariasx/dockernativemanager\\\"\" \
+                  \"license=('MIT')\" \
+                  \"\" \
+                  \"depends=('cairo' 'gdk-pixbuf2' 'glib2' 'gtk3' 'hicolor-icon-theme' 'libsoup3' 'webkit2gtk-4.1' 'gcc-libs')\" \
+                  \"\" \
+                  \"provides=('docker-native-manager')\" \
+                  \"conflicts=('docker-native-manager')\" \
+                  \"\" \
+                  \"options=('!strip')\" \
+                  \"\" \
+                  \"source=('docker-native-manager'\" \
+                  \"        'icon.png'\" \
+                  \"        'docker-native-manager.desktop'\" \
+                  \"        'LICENSE')\" \
+                  \"\" \
+                  \"sha256sums=('SKIP' 'SKIP' 'SKIP' 'SKIP')\" \
+                  \"\" \
+                  \"package() {\" \
+                  \"  install -Dm755 \\\"\\\${srcdir}/docker-native-manager\\\" \\\\\" \
+                  \"    \\\"\\\${pkgdir}/usr/bin/docker-native-manager\\\"\" \
+                  \"\" \
+                  \"  install -Dm644 \\\"\\\${srcdir}/icon.png\\\" \\\\\" \
+                  \"    \\\"\\\${pkgdir}/usr/share/icons/hicolor/256x256/apps/docker-native-manager.png\\\"\" \
+                  \"\" \
+                  \"  install -Dm644 \\\"\\\${srcdir}/docker-native-manager.desktop\\\" \\\\\" \
+                  \"    \\\"\\\${pkgdir}/usr/share/applications/docker-native-manager.desktop\\\"\" \
+                  \"\" \
+                  \"  install -Dm644 \\\"\\\${srcdir}/LICENSE\\\" \\\\\" \
+                  \"    \\\"\\\${pkgdir}/usr/share/licenses/\\\${pkgname}/LICENSE\\\"\" \
+                  \"}\" \
+                  > dist-arch/PKGBUILD
+
+                cd dist-arch
+                makepkg -s --noconfirm
+              '
+            "
 
           ARCH_PKG=$(ls dist-arch/*.pkg.tar.zst)
           gh release upload "${{ github.ref_name }}" "$ARCH_PKG" --clobber
+
+      - name: Package tar.gz and Upload
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p dist-targz
+
+          BIN_PATH="src-tauri/target/release/docker-native-manager"
+          if [ ! -f "$BIN_PATH" ]; then
+            echo "Expected binary not found at $BIN_PATH"
+            exit 1
+          fi
+
+          PKG_VERSION="${{ github.ref_name }}"
+          PKG_VERSION="${PKG_VERSION#v}"
+
+          FOLDER="docker-native-manager-${PKG_VERSION}"
+          mkdir -p "dist-targz/$FOLDER"
+
+          cp "$BIN_PATH" "dist-targz/$FOLDER/"
+          cp LICENSE "dist-targz/$FOLDER/"
+
+          TAR_GZ="Docker.Native.Manager_${PKG_VERSION}_amd64.tar.gz"
+          tar -C dist-targz -czf "$TAR_GZ" "$FOLDER"
+
+          gh release upload "${{ github.ref_name }}" "$TAR_GZ" --clobber
