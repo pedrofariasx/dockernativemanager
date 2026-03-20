@@ -4,7 +4,7 @@
  * Created: 2026-03-14
  * Author: Pedro Farias
  * 
- * Last Modified: Thu Mar 19 2026
+ * Last Modified: Fri Mar 20 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -43,7 +43,13 @@ import {
   BlocksIcon,
   Waypoints,
   Settings2,
-  Plus
+  Plus,
+  Github,
+  ExternalLink,
+  Download,
+  Sparkles,
+  Package,
+  Info
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -55,6 +61,8 @@ import {
   useDockerContext,
   createDockerContext,
   removeDockerContext,
+  openExternalLink,
+  downloadUpdate,
   type DockerContext
 } from "@/lib/docker";
 import { showSuccess, showError } from "@/utils/toast";
@@ -71,6 +79,14 @@ import {
   DialogFooter,
   DialogDescription
 } from "@/components/ui/dialog";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown, ChevronUp } from "lucide-react";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -94,6 +110,93 @@ const Sidebar = () => {
   const [isRefreshingContexts, setIsRefreshingContexts] = useState(false);
   const [isCreatingContext, setIsCreatingContext] = useState(false);
   const [newContext, setNewContext] = useState({ name: '', host: '' });
+  const [showAboutDialog, setShowAboutDialog] = useState(false);
+  const [contributors, setContributors] = useState<any[]>([]);
+  const [isLoadingContributors, setIsLoadingContributors] = useState(false);
+  const [latestVersion, setLatestVersion] = useState<string | null>(null);
+  const [isCheckingUpdates, setIsCheckingUpdates] = useState(false);
+  const [showUpdateDialog, setShowUpdateDialog] = useState(false);
+  const [latestRelease, setLatestRelease] = useState<any>(null);
+  const [downloadingAsset, setDownloadingAsset] = useState<string | null>(null);
+
+  const handleDownload = async (asset: any) => {
+    setDownloadingAsset(asset.id);
+    try {
+      const path = await downloadUpdate(asset.browser_download_url, asset.name);
+      showSuccess(`File downloaded to: ${path}`);
+    } catch (err) {
+      showError(`Download failed: ${err}`);
+    } finally {
+      setDownloadingAsset(null);
+    }
+  };
+
+  const compareVersions = (v1: string, v2: string) => {
+    const cleanV1 = v1.replace(/^v/, '');
+    const cleanV2 = v2.replace(/^v/, '');
+    const parts1 = cleanV1.split('.').map(Number);
+    const parts2 = cleanV2.split('.').map(Number);
+    
+    for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+      const p1 = parts1[i] || 0;
+      const p2 = parts2[i] || 0;
+      if (p1 > p2) return 1;
+      if (p1 < p2) return -1;
+    }
+    return 0;
+  };
+
+  const checkForUpdates = async (silent = true, forceOpen = false) => {
+    setIsCheckingUpdates(true);
+    try {
+      const response = await fetch('https://api.github.com/repos/pedrofariasx/dockernativemanager/releases/latest');
+      if (response.ok) {
+        const data = await response.json();
+        const latest = data.tag_name;
+        setLatestVersion(latest);
+        setLatestRelease(data);
+        
+        if (appVersion && compareVersions(latest, appVersion) > 0) {
+          if (forceOpen) setShowUpdateDialog(true);
+        } else if (!silent) {
+          showSuccess("You are on the latest version!");
+        }
+      }
+    } catch (err) {
+      console.error("Error checking for updates:", err);
+      if (!silent) showError("Failed to check for updates");
+    } finally {
+      setIsCheckingUpdates(false);
+    }
+  };
+
+  useEffect(() => {
+    if (appVersion) {
+      checkForUpdates(true, true);
+    }
+  }, [appVersion]);
+
+  const fetchContributors = async () => {
+    setIsLoadingContributors(true);
+    try {
+      const response = await fetch('https://api.github.com/repos/pedrofariasx/dockernativemanager/contributors');
+      if (response.ok) {
+        const data = await response.json();
+        setContributors(data);
+      }
+    } catch (err) {
+      console.error("Error fetching contributors:", err);
+    } finally {
+      setIsLoadingContributors(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showAboutDialog) {
+      if (contributors.length === 0) fetchContributors();
+      checkForUpdates(true, false);
+    }
+  }, [showAboutDialog]);
 
   const fetchContexts = async () => {
     setIsRefreshingContexts(true);
@@ -186,9 +289,9 @@ const Sidebar = () => {
       <div className="w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-full shrink-0">
         <div className="p-6 border-b border-sidebar-border flex items-center gap-3">
           <img src="/dnm-icon.png" alt="DNM Icon" className="w-12 h-12" />
-          <div>
+          <div className="flex-1 cursor-pointer" onClick={() => setShowAboutDialog(true)}>
             <h1 className="text-sidebar-foreground font-bold text-lg leading-none">Docker NM</h1>
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">{appVersion ? `${appVersion}` : ""}</p>
+            <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1 hover:text-primary transition-colors">{appVersion ? `${appVersion}` : "v0.0.0"}</p>
           </div>
         </div>
 
@@ -433,8 +536,212 @@ const Sidebar = () => {
           </div>
 
           <DialogFooter>
-            <Button variant="ghost" onClick={() => setShowClusterSettings(false)}>
+            <Button variant="outline" onClick={() => setShowClusterSettings(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAboutDialog} onOpenChange={setShowAboutDialog}>
+        <DialogContent className="bg-background border-border max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <img src="/dnm-icon.png" alt="DNM Icon" className="w-8 h-8" />
+              About Docker NM
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-2">
+              A native, fast, and lightweight Docker manager for Linux.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-6">
+            <div className="flex flex-col gap-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Project</span>
+                <div className="flex items-center gap-2">
+                  {latestVersion && appVersion && compareVersions(latestVersion, appVersion) > 0 && (
+                    <span className="text-[10px] font-bold text-blue-500 animate-pulse bg-blue-500/10 px-2 py-0.5 rounded">Update Available</span>
+                  )}
+                  <span className="text-xs font-mono bg-primary/10 text-primary px-2 py-0.5 rounded">{appVersion || "v0.0.0"}</span>
+                </div>
+              </div>
+              <div className="grid gap-2">
+                <Button 
+                  variant="outline" 
+                  className="w-full justify-between gap-2 h-11 border-primary/20 hover:bg-primary/5 hover:border-primary/40"
+                  onClick={() => openExternalLink('https://github.com/pedrofariasx/dockernativemanager')}
+                >
+                  <div className="flex items-center gap-3">
+                    <Github className="w-4 h-4" />
+                    <span className="text-sm font-bold">GitHub Repository</span>
+                  </div>
+                  <ExternalLink className="w-3.5 h-3.5 text-muted-foreground" />
+                </Button>
+                
+                {latestVersion && appVersion && compareVersions(latestVersion, appVersion) > 0 ? (
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between gap-2 h-11 border-blue-500/50 bg-blue-500/5 hover:bg-blue-500/10 hover:border-blue-500 animate-in fade-in slide-in-from-bottom-1"
+                    onClick={() => {
+                      setShowAboutDialog(false);
+                      setShowUpdateDialog(true);
+                    }}
+                  >
+                    <div className="flex items-center gap-3">
+                      <Sparkles className="w-4 h-4 text-blue-500" />
+                      <span className="text-sm font-bold text-blue-500">Download Update</span>
+                    </div>
+                    <Download className="w-3.5 h-3.5 text-blue-500" />
+                  </Button>
+                ) : (
+                  <Button 
+                    variant="outline" 
+                    className="w-full justify-between gap-2 h-11 border-sidebar-border hover:bg-sidebar-accent/50"
+                    onClick={() => checkForUpdates(false, false)}
+                    disabled={isCheckingUpdates}
+                  >
+                    <div className="flex items-center gap-3">
+                      {isCheckingUpdates ? <Loader2 className="w-4 h-4 animate-spin text-primary" /> : <RotateCw className="w-4 h-4 text-primary" />}
+                      <span className="text-sm font-bold">Check for Updates</span>
+                    </div>
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <Collapsible className="space-y-2">
+              <CollapsibleTrigger asChild>
+                <Button variant="ghost" className="w-full flex items-center justify-between p-0 h-auto hover:bg-transparent group">
+                  <h4 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground group-hover:text-foreground transition-colors">Contributors</h4>
+                  <div className="flex items-center gap-2">
+                    {isLoadingContributors && <Loader2 className="w-3 h-3 animate-spin text-muted-foreground" />}
+                    <ChevronDown className="h-4 w-4 text-muted-foreground group-hover:text-foreground transition-all duration-300 CollapsibleTrigger:open:rotate-180" />
+                  </div>
+                </Button>
+              </CollapsibleTrigger>
+              
+              <CollapsibleContent className="animate-in fade-in slide-in-from-top-2">
+                <ScrollArea className="h-[180px] w-full rounded-md border border-sidebar-border p-2 bg-muted/10">
+                  <div className="grid gap-2">
+                    {contributors.map((contributor) => (
+                      <div 
+                        key={contributor.id} 
+                        className="flex items-center gap-3 p-2 rounded-lg hover:bg-sidebar-accent/30 transition-colors cursor-pointer group/item"
+                        onClick={() => openExternalLink(contributor.html_url)}
+                      >
+                        <Avatar className="h-8 w-8 border border-sidebar-border shrink-0">
+                          <AvatarImage src={contributor.avatar_url} />
+                          <AvatarFallback>{contributor.login.substring(0, 2).toUpperCase()}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex flex-col min-w-0 flex-1">
+                          <span className="text-sm font-bold truncate">{contributor.login}</span>
+                          <span className="text-[10px] text-muted-foreground">
+                            {contributor.contributions} contributions
+                          </span>
+                        </div>
+                        <ExternalLink className="w-3 h-3 ml-auto text-muted-foreground opacity-0 group-hover/item:opacity-100 transition-opacity" />
+                      </div>
+                    ))}
+                    {contributors.length === 0 && !isLoadingContributors && (
+                      <p className="text-xs text-center text-muted-foreground py-4 italic">
+                        No contributors found.
+                      </p>
+                    )}
+                  </div>
+                </ScrollArea>
+              </CollapsibleContent>
+            </Collapsible>
+
+    
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAboutDialog(false)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showUpdateDialog} onOpenChange={setShowUpdateDialog}>
+        <DialogContent className="bg-background border-border max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-3 text-blue-500">
+              <Sparkles className="w-6 h-6" />
+              New version available!
+            </DialogTitle>
+            <DialogDescription className="text-muted-foreground pt-2">
+              A new version of Docker Native Manager is ready. Download the latest release to get the latest features and fixes.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4 space-y-5">
+            <div className="flex items-center justify-between p-3 bg-blue-500/5 rounded-lg border border-blue-500/10">
+              <div className="flex flex-col">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold">Latest</span>
+                <span className="text-xl font-black text-blue-500">{latestVersion}</span>
+              </div>
+              <div className="flex flex-col items-end">
+                <span className="text-[10px] text-muted-foreground uppercase tracking-widest font-bold text-right">Current</span>
+                <span className="text-sm font-bold text-muted-foreground">{appVersion}</span>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+                <Package className="w-3 h-3" />
+                Available Formats
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                {latestRelease?.assets?.map((asset: any) => {
+                  const name = asset.name.toLowerCase();
+                  let extension = "";
+                  
+                  if (name.endsWith('.appimage')) extension = "AppImage";
+                  else if (name.endsWith('.deb')) extension = "DEB";
+                  else if (name.endsWith('.rpm')) extension = "RPM";
+                  else if (name.endsWith('.tar.gz')) extension = "TAR.GZ";
+                  else if (name.endsWith('.zip')) extension = "ZIP";
+                  else extension = asset.name.split('.').pop()?.toUpperCase() || "FILE";
+
+                  return (
+                    <Button 
+                      key={asset.id} 
+                      variant="outline"
+                      size="sm"
+                      className={cn(
+                        "h-8 px-3 gap-2 border-sidebar-border hover:border-blue-500/50 hover:bg-blue-500/5 transition-all",
+                        downloadingAsset === asset.id && "border-blue-500 bg-blue-500/10 shadow-[0_0_10px_rgba(59,130,246,0.1)]"
+                      )}
+                      onClick={() => downloadingAsset !== asset.id && handleDownload(asset)}
+                      disabled={downloadingAsset !== null && downloadingAsset !== asset.id}
+                      title={asset.name}
+                    >
+                      {downloadingAsset === asset.id ? (
+                        <Loader2 className="w-3 h-3 animate-spin text-blue-500" />
+                      ) : (
+                        <Download className="w-3 h-3 text-blue-500" />
+                      )}
+                      <span className="text-[11px] font-bold">{extension}</span>
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="ghost" className="text-muted-foreground" onClick={() => setShowUpdateDialog(false)}>
+              Remind me later
+            </Button>
+            <Button 
+              className="bg-blue-600 hover:bg-blue-700 text-white gap-2 font-bold"
+              onClick={() => openExternalLink(latestRelease?.html_url)}
+            >
+              View on GitHub
+              <ExternalLink className="w-4 h-4" />
             </Button>
           </DialogFooter>
         </DialogContent>

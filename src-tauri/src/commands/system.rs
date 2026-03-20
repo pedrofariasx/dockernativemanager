@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-17
  * 
- * Last Modified: Thu Mar 19 2026
+ * Last Modified: Fri Mar 20 2026
  * Modified By: Pedro Farias
  * 
  */
@@ -11,6 +11,61 @@
 use crate::models::SystemInfo;
 use crate::utils::{get_docker, IS_STOPPED_INTENTIONALLY};
 use std::sync::atomic::Ordering;
+
+#[tauri::command]
+pub async fn open_external_link(url: String) -> Result<(), String> {
+    // Basic security check - only allow http/https
+    if !url.starts_with("http://") && !url.starts_with("https://") {
+        return Err("Invalid URL".to_string());
+    }
+
+    #[cfg(target_os = "linux")]
+    {
+        std::process::Command::new("xdg-open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "windows")]
+    {
+        std::process::Command::new("cmd")
+            .args(["/C", "start", &url])
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        std::process::Command::new("open")
+            .arg(&url)
+            .spawn()
+            .map_err(|e| e.to_string())?;
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
+pub async fn download_update(url: String, filename: String) -> Result<String, String> {
+    let home = std::env::var("HOME").map_err(|_| "Could not find HOME directory".to_string())?;
+    let download_path = format!("{}/Downloads/{}", home, filename);
+
+    // Using curl to download the file - common on Linux/macOS
+    let output = std::process::Command::new("curl")
+        .arg("-L")
+        .arg("-o")
+        .arg(&download_path)
+        .arg(&url)
+        .output()
+        .map_err(|e| format!("Failed to execute curl: {}", e))?;
+
+    if !output.status.success() {
+        return Err(format!("Download failed: {}", String::from_utf8_lossy(&output.stderr)));
+    }
+
+    Ok(download_path)
+}
 
 #[tauri::command]
 pub async fn get_system_info() -> Result<SystemInfo, String> {

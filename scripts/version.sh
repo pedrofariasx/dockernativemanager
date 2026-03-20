@@ -44,4 +44,4 @@ fi
 echo "--------------------------------"
 echo "Versão do projeto: $NEW_VERSION"
 echo "Versão Arch (PKGBUILD): $ARCH_VERSION"
-echo "Concluído! Versão alterada por Pedro Farias."
+echo "Concluído! Versão alterada"

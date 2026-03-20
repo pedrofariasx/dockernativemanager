@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-13
  * 
- * Last Modified: Thu Mar 19 2026
+ * Last Modified: Fri Mar 20 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -82,6 +82,8 @@ fn main() {
             inspect_volume,
             inspect_network,
             get_system_info,
+            open_external_link,
+            download_update,
             exec_container,
             write_stdin,
             prune_volumes,

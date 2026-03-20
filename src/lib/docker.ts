@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-13
  * 
- * Last Modified: 2026-03-19 12:48:03
+ * Last Modified: 2026-03-20 11:05:30
  * Modified By: Pedro Farias
  * 
  */
@@ -410,6 +410,16 @@ export const getSystemInfo = async (): Promise<SystemInfo> => {
     mem_total: 16000000000
   };
   return await invoke("get_system_info");
+};
+
+export const openExternalLink = async (url: string): Promise<void> => {
+  if (!isTauri) return window.open(url, "_blank")?.focus();
+  return await invoke("open_external_link", { url });
+};
+
+export const downloadUpdate = async (url: string, filename: string): Promise<string> => {
+  if (!isTauri) throw new Error("Not in Tauri environment");
+  return await invoke("download_update", { url, filename });
 };
 
 export const execContainer = async (

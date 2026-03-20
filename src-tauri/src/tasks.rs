@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-17
  * 
- * Last Modified: Thu Mar 19 2026
+ * Last Modified: Fri Mar 20 2026
  * Modified By: Pedro Farias
  * 
  */
@@ -17,6 +17,20 @@ use crate::models::{ContainerStats, HostStats};
 use crate::utils::{get_docker, IS_STOPPED_INTENTIONALLY};
 
 pub async fn listen_to_docker_events(app_handle: AppHandle) {
+    // Immediate check on startup
+    match get_docker() {
+        Ok(docker) => {
+            if docker.ping().await.is_ok() {
+                let _ = app_handle.emit("docker-connection-status", true);
+            } else {
+                let _ = app_handle.emit("docker-connection-status", false);
+            }
+        }
+        Err(_) => {
+            let _ = app_handle.emit("docker-connection-status", false);
+        }
+    }
+
     loop {
         if IS_STOPPED_INTENTIONALLY.load(Ordering::SeqCst) {
             let _ = app_handle.emit("docker-connection-status", false);
