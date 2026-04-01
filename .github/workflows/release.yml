@@ -20,6 +20,9 @@ jobs:
         run: |
           TAG_VERSION="${{ github.ref_name }}"
           TAG_VERSION="${TAG_VERSION#v}"
+
+          TAG_BASE_VERSION="${TAG_VERSION%%-*}"
+
           APP_VERSION="$(jq -r '.version' src-tauri/tauri.conf.json)"
 
           if [ -z "$APP_VERSION" ] || [ "$APP_VERSION" = "null" ]; then
@@ -27,8 +30,8 @@ jobs:
             exit 1
           fi
 
-          if [ "$TAG_VERSION" != "$APP_VERSION" ]; then
-            echo "Tag version ($TAG_VERSION) does not match app version ($APP_VERSION)."
+          if [ "$TAG_BASE_VERSION" != "$APP_VERSION" ]; then
+            echo "Tag base version ($TAG_BASE_VERSION) does not match app version ($APP_VERSION)."
             exit 1
           fi
 
