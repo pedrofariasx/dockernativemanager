@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-17
  * 
- * Last Modified: Thu Mar 19 2026
+ * Last Modified: Wed Apr 01 2026
  * Modified By: Pedro Farias
  * 
  */
@@ -17,6 +17,8 @@ use crate::utils::get_docker;
 #[tauri::command]
 pub async fn get_stacks() -> Result<Vec<StackInfo>, String> {
     let docker = get_docker()?;
+    
+    // 1. Get all containers for Compose stacks
     let containers = docker
         .list_containers(Some(ListContainersOptions::<String> {
             all: true,
@@ -25,51 +27,211 @@ pub async fn get_stacks() -> Result<Vec<StackInfo>, String> {
         .await
         .map_err(|e| e.to_string())?;
 
-    let mut stacks: HashMap<String, (usize, bool, i64, i64, String)> = HashMap::new();
+    struct StackStats {
+        total: usize,
+        running: usize,
+        exited: usize,
+        completed: usize,
+        failed: usize,
+        created: i64,
+        updated: i64,
+        stack_type: String,
+    }
 
+    let mut stacks: HashMap<String, StackStats> = HashMap::new();
+
+    // Process containers (mainly for Compose)
     for c in containers {
         if let Some(labels) = c.labels {
-            if let Some(stack_name) = labels.get("com.docker.compose.project") {
+            if let Some(name) = labels.get("com.docker.compose.project") {
                 let created = c.created.unwrap_or(0);
-                let entry = stacks.entry(stack_name.clone()).or_insert((0, true, created, created, "Compose".to_string()));
-                entry.0 += 1;
-                if c.state.as_deref() != Some("running") {
-                    entry.1 = false;
+                let state = c.state.as_deref().unwrap_or("");
+                let status = c.status.as_deref().unwrap_or("");
+                
+                let stats = stacks.entry(name.clone()).or_insert_with(|| {
+                    StackStats {
+                        total: 0,
+                        running: 0,
+                        exited: 0,
+                        completed: 0,
+                        failed: 0,
+                        created,
+                        updated: created,
+                        stack_type: "Compose".into(),
+                    }
+                });
+
+                stats.total += 1;
+                match state {
+                    "running" => stats.running += 1,
+                    "exited" => {
+                        stats.exited += 1;
+                        if status.contains("Exited (0)") {
+                            stats.completed += 1;
+                        } else {
+                            stats.failed += 1;
+                        }
+                    }
+                    _ => {}
                 }
-                if created < entry.2 && created != 0 {
-                    entry.2 = created;
+
+                if created != 0 && (stats.created == 0 || created < stats.created) {
+                    stats.created = created;
                 }
-                if created > entry.3 {
-                    entry.3 = created;
-                }
-            } else if let Some(stack_name) = labels.get("com.docker.stack.namespace") {
-                let created = c.created.unwrap_or(0);
-                let entry = stacks.entry(stack_name.clone()).or_insert((0, true, created, created, "Swarm".to_string()));
-                entry.0 += 1;
-                if c.state.as_deref() != Some("running") {
-                    entry.1 = false;
-                }
-                if created < entry.2 && created != 0 {
-                    entry.2 = created;
-                }
-                if created > entry.3 {
-                    entry.3 = created;
+                if created > stats.updated {
+                    stats.updated = created;
                 }
             }
         }
     }
 
-    Ok(stacks
+    // 2. Check for Swarm stacks via CLI (Cluster-wide) - OPTIMIZED & ROBUST
+    if let Ok(info) = docker.info().await {
+        let is_swarm = info.swarm.and_then(|s| s.local_node_state).map(|st| st == bollard::models::LocalNodeState::ACTIVE).unwrap_or(false);
+        
+        if is_swarm {
+            // Get all service IDs first
+            let list_output = std::process::Command::new("docker")
+                .args(["service", "ls", "-q"])
+                .output()
+                .ok();
+
+            if let Some(l_out) = list_output {
+                if l_out.status.success() {
+                    let ids_str = String::from_utf8_lossy(&l_out.stdout);
+                    let ids: Vec<&str> = ids_str.lines().filter(|l| !l.trim().is_empty()).collect();
+
+                    if !ids.is_empty() {
+                        // Inspect all services in one go to get full details (including labels and replicas)
+                        let mut inspect_args = vec!["service", "inspect", "--format", "{{json .}}"];
+                        inspect_args.extend(ids);
+
+                        let inspect_output = std::process::Command::new("docker")
+                            .args(inspect_args)
+                            .output()
+                            .ok();
+
+                        if let Some(i_out) = inspect_output {
+                            if i_out.status.success() {
+                                let stdout = String::from_utf8_lossy(&i_out.stdout);
+                                for line in stdout.lines() {
+                                    if line.trim().is_empty() { continue; }
+                                    // docker service inspect --format "{{json .}}" returns one JSON per line
+                                    if let Ok(service) = serde_json::from_str::<serde_json::Value>(line) {
+                                        let labels = service.get("Spec").and_then(|s| s.get("Labels"));
+                                        if let Some(stack_name) = labels.and_then(|l| l.get("com.docker.stack.namespace")).and_then(|n| n.as_str()) {
+                                            let stats = stacks.entry(stack_name.to_string()).or_insert_with(|| {
+                                                StackStats {
+                                                    total: 0,
+                                                    running: 0,
+                                                    exited: 0,
+                                                    completed: 0,
+                                                    failed: 0,
+                                                    created: 0,
+                                                    updated: 0,
+                                                    stack_type: "Swarm".into(),
+                                                }
+                                            });
+
+                                            stats.total += 1;
+
+                                            // Determine health from Service Status (populated by --status flag)
+                                            let mut running = service.get("ServiceStatus")
+                                                .and_then(|s| s.get("RunningTasks"))
+                                                .and_then(|v| v.as_u64())
+                                                .unwrap_or(0);
+                                            let mut desired = service.get("ServiceStatus")
+                                                .and_then(|s| s.get("DesiredTasks"))
+                                                .and_then(|v| v.as_u64())
+                                                .unwrap_or(0);
+
+                                            // Fallback if ServiceStatus is missing or empty
+                                            if desired == 0 {
+                                                if let Some(spec_mode) = service.get("Spec").and_then(|s| s.get("Mode")) {
+                                                    if let Some(replicated) = spec_mode.get("Replicated") {
+                                                        desired = replicated.get("Replicas").and_then(|r| r.as_u64()).unwrap_or(0);
+                                                    } else if spec_mode.get("Global").is_some() {
+                                                        // Global services have no fixed desired replicas in Spec, 
+                                                        // but they are intended to run. 
+                                                        desired = 1; 
+                                                    }
+                                                }
+                                                // If we found a desired count > 0 but have no running info (missing ServiceStatus),
+                                                // assume it is running for status purposes to avoid "Stopped" false positives.
+                                                if running == 0 && desired > 0 {
+                                                    running = desired;
+                                                }
+                                            }
+
+                                            if desired > 0 {
+                                                if running == desired {
+                                                    stats.running += 1;
+                                                } else if running > 0 {
+                                                    stats.running += 1; // Partial counts as running for overall stack status
+                                                } else {
+                                                    stats.exited += 1;
+                                                }
+                                            } else {
+                                                stats.exited += 1;
+                                            }
+
+                                            // Created time
+                                            if let Some(created_str) = service.get("CreatedAt").and_then(|c| c.as_str()) {
+                                                if let Ok(dt) = chrono::DateTime::parse_from_rfc3339(created_str) {
+                                                    let ts = dt.timestamp();
+                                                    if stats.created == 0 || ts < stats.created {
+                                                        stats.created = ts;
+                                                    }
+                                                    if ts > stats.updated {
+                                                        stats.updated = ts;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    let mut result: Vec<StackInfo> = stacks
         .into_iter()
-        .map(|(name, (services, all_running, created, updated, stack_type))| StackInfo {
-            name,
-            services,
-            status: if all_running { "running".into() } else { "degraded".into() },
-            created,
-            updated,
-            stack_type,
+        .map(|(name, stats)| {
+            let status = if stats.total == 0 {
+                "inactive".into()
+            } else if stats.running == stats.total {
+                "running".into()
+            } else if stats.completed == stats.total {
+                "completed".into()
+            } else if stats.exited == stats.total {
+                if stats.failed > 0 { "failed".into() } else { "stopped".into() }
+            } else if stats.running > 0 {
+                "partial".into()
+            } else if stats.failed > 0 {
+                "failed".into()
+            } else {
+                "degraded".into()
+            };
+
+            StackInfo {
+                name,
+                services: stats.total,
+                status,
+                created: stats.created,
+                updated: stats.updated,
+                stack_type: stats.stack_type,
+            }
         })
-        .collect())
+        .collect();
+
+    // Sort by Created descending (most recent first)
+    result.sort_by(|a, b| b.created.cmp(&a.created));
+
+    Ok(result)
 }
 
 #[tauri::command]
@@ -153,7 +315,24 @@ pub async fn remove_stack(name: String, stack_type: String) -> Result<(), String
 #[tauri::command]
 pub async fn stop_stack(name: String, stack_type: String) -> Result<(), String> {
     if stack_type == "Swarm" {
-        return Err("Stopping a Swarm stack is not directly supported. Scale services to 0 instead.".into());
+        // Find all services in this stack
+        let output = std::process::Command::new("docker")
+            .args(["service", "ls", "--filter", &format!("label=com.docker.stack.namespace={}", name), "--format", "{{.ID}}"])
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for service_id in stdout.lines() {
+            if service_id.trim().is_empty() { continue; }
+            let _ = std::process::Command::new("docker")
+                .args(["service", "scale", &format!("{}=0", service_id.trim())])
+                .output();
+        }
+        return Ok(());
     }
     let output = std::process::Command::new("docker")
         .arg("compose")
@@ -172,9 +351,8 @@ pub async fn stop_stack(name: String, stack_type: String) -> Result<(), String> 
 #[tauri::command]
 pub async fn start_stack(app: AppHandle, name: String, stack_type: String) -> Result<(), String> {
     if stack_type == "Swarm" {
-        // For swarm, starting usually means redeploying if it was removed, 
-        // but if it's just "scaled to 0", we'd need to know which services.
-        // For now, let's just support redeploying if we have the file.
+        // Try to find services first. If they exist but are scaled to 0, we can start them.
+        // If we have a compose file, redeploying is better.
         use tauri::Manager;
         let app_dir = app.path().app_local_data_dir().map_err(|e| e.to_string())?;
         let stacks_dir = app_dir.join("stacks");
@@ -195,7 +373,27 @@ pub async fn start_stack(app: AppHandle, name: String, stack_type: String) -> Re
             }
             return Ok(());
         } else {
-            return Err("Compose file not found for Swarm stack. Cannot restart.".into());
+            // No compose file, but maybe services exist (remote context case)
+            // Scale them to 1
+            let output = std::process::Command::new("docker")
+                .args(["service", "ls", "--filter", &format!("label=com.docker.stack.namespace={}", name), "--format", "{{.ID}}"])
+                .output()
+                .map_err(|e| e.to_string())?;
+
+            if output.status.success() {
+                let stdout = String::from_utf8_lossy(&output.stdout);
+                let ids: Vec<&str> = stdout.lines().filter(|l| !l.trim().is_empty()).collect();
+                
+                if !ids.is_empty() {
+                    for service_id in ids {
+                        let _ = std::process::Command::new("docker")
+                            .args(["service", "scale", &format!("{}=1", service_id.trim())])
+                            .output();
+                    }
+                    return Ok(());
+                }
+            }
+            return Err("Compose file not found and no services found for this Swarm stack.".into());
         }
     }
 
@@ -224,9 +422,24 @@ pub async fn start_stack(app: AppHandle, name: String, stack_type: String) -> Re
 #[tauri::command]
 pub async fn restart_stack(name: String, stack_type: String) -> Result<(), String> {
     if stack_type == "Swarm" {
-        // Restarting a swarm stack is usually done service by service with --force
-        // or by redeploying. Let's return an error for now as it's complex.
-        return Err("Restarting a Swarm stack is not directly supported. Use 'Update' or restart individual services.".into());
+        // Find all services in this stack and update --force
+        let output = std::process::Command::new("docker")
+            .args(["service", "ls", "--filter", &format!("label=com.docker.stack.namespace={}", name), "--format", "{{.ID}}"])
+            .output()
+            .map_err(|e| e.to_string())?;
+
+        if !output.status.success() {
+            return Err(String::from_utf8_lossy(&output.stderr).to_string());
+        }
+
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        for service_id in stdout.lines() {
+            if service_id.trim().is_empty() { continue; }
+            let _ = std::process::Command::new("docker")
+                .args(["service", "update", "--force", service_id.trim()])
+                .output();
+        }
+        return Ok(());
     }
     let output = std::process::Command::new("docker")
         .arg("compose")

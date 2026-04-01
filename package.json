@@ -1,6 +1,6 @@
 {
   "name": "docker-native-manager",
-  "version": "1.9.0",
+  "version": "1.10.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -60,6 +60,7 @@
     "react-day-picker": "^9.13.0",
     "react-dom": "^19.2.3",
     "react-hook-form": "^7.53.0",
+    "react-markdown": "^10.1.0",
     "react-resizable-panels": "^2.1.3",
     "react-router-dom": "^6.26.2",
     "recharts": "^2.12.7",

@@ -4,7 +4,7 @@
  * Created: 2026-03-13
  * Author: Pedro Farias
  * 
- * Last Modified: Thu Mar 19 2026
+ * Last Modified: Wed Apr 01 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -192,6 +192,7 @@ const Stacks = () => {
   const [selectedStack, setSelectedStack] = useState<Stack | null>(null);
   const [stackContainers, setStackContainers] = useState<any[]>([]);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const [processingStacks, setProcessingStacks] = useState<Set<string>>(new Set());
   const [showLogsSheet, setShowLogsSheet] = useState(false);
   const [logsStack, setLogsStack] = useState<Stack | null>(null);
   const [stackLogs, setStackLogs] = useState("");
@@ -393,6 +394,11 @@ const Stacks = () => {
 
   const handleStackAction = async (name: string, action: 'start' | 'stop' | 'restart') => {
     setIsActionLoading(true);
+    setProcessingStacks(prev => {
+      const next = new Set(prev);
+      next.add(name);
+      return next;
+    });
     try {
       const stack = combinedStacks.find(s => s.name === name);
       const type = stack?.stack_type || "Compose";
@@ -401,12 +407,27 @@ const Stacks = () => {
       else if (action === 'restart') await restartStack(name, type);
       
       showSuccess(`Stack ${action}ed successfully`);
-      refreshStacks();
+      
+      // Wait a bit before refresh to allow Docker state to catch up
+      setTimeout(() => {
+        refreshStacks();
+        setProcessingStacks(prev => {
+          const next = new Set(prev);
+          next.delete(name);
+          return next;
+        });
+      }, 1500);
+
       if (selectedStack && selectedStack.name === name) {
-        setTimeout(() => openStackDetails(selectedStack), 1000);
+        setTimeout(() => openStackDetails(selectedStack), 2000);
       }
     } catch (err) {
       showError(`Error ${action}ing stack: ${err}`);
+      setProcessingStacks(prev => {
+        const next = new Set(prev);
+        next.delete(name);
+        return next;
+      });
     } finally {
       setIsActionLoading(false);
     }
@@ -453,6 +474,12 @@ const Stacks = () => {
     if (selectedIds.length === 0) return;
     
     setIsActionLoading(true);
+    setProcessingStacks(prev => {
+      const next = new Set(prev);
+      selectedIds.forEach(id => next.add(id));
+      return next;
+    });
+
     let success = 0;
     
     for (const name of selectedIds) {
@@ -474,8 +501,17 @@ const Stacks = () => {
     
     showSuccess(`${success}/${selectedIds.length} stacks ${action === 'update' ? 'updated' : action + 'ed'} successfully`);
     setSelectedIds([]);
+    
+    setTimeout(() => {
+      refreshStacks();
+      setProcessingStacks(prev => {
+        const next = new Set(prev);
+        selectedIds.forEach(id => next.delete(id));
+        return next;
+      });
+    }, 2000);
+
     setIsActionLoading(false);
-    refreshStacks();
   };
 
   const fetchLogs = useCallback(async (name: string, silent = false) => {
@@ -741,7 +777,7 @@ const Stacks = () => {
                     )}
                   >
                     <TableCell>
-                      {s.isDeploying ? (
+                      {s.isDeploying || processingStacks.has(s.name) ? (
                         <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <Checkbox
@@ -759,16 +795,30 @@ const Stacks = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge className={cn(
-                        "px-2 py-0.5 text-[10px] font-mono uppercase border font-semibold",
-                        s.status === "running"
-                          ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
-                          : s.isDeploying
-                          ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
-                          : "bg-amber-500/10 text-amber-500 border-amber-500/20"
-                      )}>
-                        {s.status}
-                      </Badge>
+                      {processingStacks.has(s.name) ? (
+                        <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20 px-2 py-0.5 text-[10px] font-mono uppercase border font-semibold animate-pulse">
+                          Processing...
+                        </Badge>
+                      ) : (
+                        <Badge className={cn(
+                          "px-2 py-0.5 text-[10px] font-mono uppercase border font-semibold",
+                          s.status === "running"
+                            ? "bg-emerald-500/10 text-emerald-500 border-emerald-500/20"
+                            : s.status === "completed"
+                            ? "bg-blue-500/10 text-blue-500 border-blue-500/20"
+                            : s.status === "partial"
+                            ? "bg-indigo-500/10 text-indigo-500 border-indigo-500/20"
+                            : s.status === "failed"
+                            ? "bg-rose-500/10 text-rose-500 border-rose-500/20"
+                            : (s.status === "stopped" || s.status === "inactive")
+                            ? "bg-slate-500/10 text-slate-500 border-slate-500/20"
+                            : s.isDeploying
+                            ? "bg-blue-500/10 text-blue-500 border-blue-500/20 animate-pulse"
+                            : "bg-amber-500/10 text-amber-500 border-amber-500/20"
+                        )}>
+                          {s.status}
+                        </Badge>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline" className="text-[10px] font-mono uppercase">
@@ -778,17 +828,17 @@ const Stacks = () => {
                     <TableCell className="text-muted-foreground text-sm">
                       <div className="flex items-center gap-2">
                         <Activity className="w-3 h-3" />
-                        {s.isDeploying ? "Deploying..." : `${s.services} services`}
+                        {s.isDeploying ? "Deploying..." : processingStacks.has(s.name) ? "Processing..." : `${s.services} services`}
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
-                      {s.isDeploying ? "Just now" : (s.created ? new Date(s.created * 1000).toLocaleString() : "-")}
+                      {s.isDeploying || processingStacks.has(s.name) ? "Just now" : (s.created ? new Date(s.created * 1000).toLocaleString() : "-")}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-xs">
-                      {s.isDeploying ? "Just now" : (s.updated ? new Date(s.updated * 1000).toLocaleString() : "-")}
+                      {s.isDeploying || processingStacks.has(s.name) ? "Just now" : (s.updated ? new Date(s.updated * 1000).toLocaleString() : "-")}
                     </TableCell>
                     <TableCell className="text-right">
-                      {s.isDeploying ? (
+                      {s.isDeploying || processingStacks.has(s.name) ? (
                         <Button variant="ghost" size="sm" disabled className="h-8 w-8 p-0 opacity-50">
                           <MoreVertical className="h-4 w-4" />
                         </Button>

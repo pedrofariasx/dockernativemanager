@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-17
  * 
- * Last Modified: Tue Mar 17 2026
+ * Last Modified: Wed Apr 01 2026
  * Modified By: Pedro Farias
  * 
  */
@@ -29,12 +29,31 @@ pub async fn get_images() -> Result<Vec<ImageInfo>, String> {
     Ok(images
         .into_iter()
         .map(|img| {
-            let repo_tag = img.repo_tags.first().cloned().unwrap_or_else(|| "none:none".to_string());
-            let parts: Vec<&str> = repo_tag.split(':').collect();
+            // Priority: repo_tags -> repo_digests -> "none"
+            let (repo, tag) = if let Some(tag) = img.repo_tags.first() {
+                if tag == "<none>:<none>" {
+                    // Check digests for more info
+                    if let Some(digest) = img.repo_digests.first() {
+                        let d_parts: Vec<&str> = digest.split('@').collect();
+                        (d_parts.first().unwrap_or(&"none").to_string(), "sha256".to_string())
+                    } else {
+                        ("none".to_string(), "none".to_string())
+                    }
+                } else {
+                    let parts: Vec<&str> = tag.split(':').collect();
+                    (parts.first().unwrap_or(&"none").to_string(), parts.get(1).unwrap_or(&"none").to_string())
+                }
+            } else if let Some(digest) = img.repo_digests.first() {
+                let d_parts: Vec<&str> = digest.split('@').collect();
+                (d_parts.first().unwrap_or(&"none").to_string(), "sha256".to_string())
+            } else {
+                ("none".to_string(), "none".to_string())
+            };
+
             ImageInfo {
                 id: img.id.replace("sha256:", "").chars().take(12).collect(),
-                repository: parts.first().unwrap_or(&"none").to_string(),
-                tag: parts.get(1).unwrap_or(&"none").to_string(),
+                repository: repo,
+                tag,
                 size: format!("{:.2} MB", img.size as f64 / 1024.0 / 1024.0),
                 created: img.created.to_string(),
                 created_at: Local.timestamp_opt(img.created, 0)
