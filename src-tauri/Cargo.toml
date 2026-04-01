@@ -1,6 +1,6 @@
 [package]
 name = "docker-native-manager"
-version = "1.7.0"
+version = "1.8.0"
 description = "A powerful, native, and cross-platform GUI for managing Docker environments, containers, and stacks."
 authors = ["Pedro Farias"]
 edition = "2021"
@@ -20,6 +20,7 @@ chrono = { version = "0.4", features = ["serde"] }
 tauri-plugin-dialog = "2.6.0"
 tauri-plugin-fs = "2.4.5"
 uuid = { version = "1.7.0", features = ["v4"] }
+lazy_static = "1.5"
 
 [features]
 # this feature is used for production builds or when `devPath` points to the filesystem

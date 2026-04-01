@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-17
  * 
- * Last Modified: Fri Mar 20 2026
+ * Last Modified: Tue Mar 31 2026
  * Modified By: Pedro Farias
  * 
  */
@@ -73,7 +73,8 @@ pub async fn listen_to_docker_events(app_handle: AppHandle) {
                 let _ = app_handle.emit("docker-connection-status", false);
             }
         }
-        tokio::time::sleep(tokio::time::Duration::from_secs(5)).await;
+        // Short delay before retry - allows SSH tunnel to establish on context switch
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
 }
 

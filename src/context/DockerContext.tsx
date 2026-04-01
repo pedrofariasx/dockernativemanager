@@ -4,7 +4,7 @@
  * Created: 2026-03-14
  * Author: Pedro Farias
  * 
- * Last Modified: Fri Mar 20 2026
+ * Last Modified: Tue Mar 31 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -288,7 +288,9 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(prev => ({ ...prev, systemInfo: true }));
     try {
       const result = await manageDockerService(action);
-      showSuccess(result);
+      if (action !== 'reconnect') {
+        showSuccess(result);
+      }
       
       if (action === 'stop') {
         setIsConnected(false);
@@ -303,8 +305,18 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setHostStatsHistory([]);
       } else {
         // Only refresh if starting, restarting or reconnecting
-        const delay = action === 'reconnect' ? 500 : 3000;
-        setTimeout(refreshAll, delay);
+        // SSH tunnels can take several seconds to establish
+        const delay = action === 'reconnect' ? 2000 : 3000;
+        setTimeout(async () => {
+          try {
+            await refreshAll();
+          } catch {
+            // If first attempt fails (e.g., SSH tunnel still starting), retry after delay
+            if (action === 'reconnect') {
+              setTimeout(refreshAll, 3000);
+            }
+          }
+        }, delay);
       }
     } catch (err) {
       showError(`Failed to ${action} Docker service: ${err}`);

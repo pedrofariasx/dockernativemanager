@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-13
  * 
- * Last Modified: 2026-03-20 11:05:30
+ * Last Modified: Tue Mar 31 2026
  * Modified By: Pedro Farias
  * 
  */
@@ -472,4 +472,38 @@ export const createDockerContext = async (name: string, host: string): Promise<v
 export const removeDockerContext = async (name: string): Promise<void> => {
   if (!isTauri) return console.log("Mock: Removing context", name);
   return await invoke("remove_docker_context", { name });
+};
+
+export const testDockerConnection = async (host: string, sshKey?: string): Promise<string> => {
+  if (!isTauri) return "mock-hostname";
+  return await invoke("test_docker_connection", { host, sshKey: sshKey || null });
+};
+
+export interface SshKeyInfo {
+  name: string;
+  path: string;
+  has_public_key: boolean;
+}
+
+export const listSshKeys = async (): Promise<SshKeyInfo[]> => {
+  if (!isTauri) return [
+    { name: "id_rsa", path: "/home/user/.ssh/id_rsa", has_public_key: true },
+    { name: "id_ed25519", path: "/home/user/.ssh/id_ed25519", has_public_key: true },
+  ];
+  return await invoke("list_ssh_keys");
+};
+
+export const configureSshHost = async (
+  hostname: string,
+  user: string,
+  port: number | null,
+  identityFile: string
+): Promise<void> => {
+  if (!isTauri) return console.log("Mock: Configuring SSH host", hostname, user, port, identityFile);
+  return await invoke("configure_ssh_host", { hostname, user, port, identityFile });
+};
+
+export const removeSshHostConfig = async (hostname: string): Promise<void> => {
+  if (!isTauri) return console.log("Mock: Removing SSH host config", hostname);
+  return await invoke("remove_ssh_host_config", { hostname });
 };

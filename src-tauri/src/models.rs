@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-17
  * 
- * Last Modified: Thu Mar 19 2026
+ * Last Modified: Tue Mar 31 2026
  * Modified By: Pedro Farias
  * 
  */
@@ -142,4 +142,11 @@ pub struct DockerContextInfo {
     pub description: String,
     pub docker_endpoint: String,
     pub is_active: bool,
+}
+
+#[derive(Serialize)]
+pub struct SshKeyInfo {
+    pub name: String,
+    pub path: String,
+    pub has_public_key: bool,
 }

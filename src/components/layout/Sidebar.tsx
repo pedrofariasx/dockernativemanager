@@ -4,7 +4,7 @@
  * Created: 2026-03-14
  * Author: Pedro Farias
  * 
- * Last Modified: Fri Mar 20 2026
+ * Last Modified: Tue Mar 31 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -49,7 +49,9 @@ import {
   Download,
   Sparkles,
   Package,
-  Info
+  Info,
+  Wifi,
+  KeyRound
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -61,9 +63,13 @@ import {
   useDockerContext,
   createDockerContext,
   removeDockerContext,
+  testDockerConnection,
+  listSshKeys,
+  configureSshHost,
   openExternalLink,
   downloadUpdate,
-  type DockerContext
+  type DockerContext,
+  type SshKeyInfo
 } from "@/lib/docker";
 import { showSuccess, showError } from "@/utils/toast";
 import { useState, useEffect } from "react";
@@ -100,7 +106,7 @@ const navItems = [
 
 const Sidebar = () => {
   const location = useLocation();
-  const { isConnected, manageService, refreshAll } = useDocker();
+  const { isConnected, manageService, refreshAll, loading } = useDocker();
   const [isPruning, setIsPruning] = useState(false);
   const [isManagingService, setIsManagingService] = useState(false);
   const [showPruneDialog, setShowPruneDialog] = useState(false);
@@ -118,6 +124,11 @@ const Sidebar = () => {
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [latestRelease, setLatestRelease] = useState<any>(null);
   const [downloadingAsset, setDownloadingAsset] = useState<string | null>(null);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [sshKeys, setSshKeys] = useState<SshKeyInfo[]>([]);
+  const [selectedSshKey, setSelectedSshKey] = useState<string>('');
+  const [showSshConfig, setShowSshConfig] = useState(false);
 
   const handleDownload = async (asset: any) => {
     setDownloadingAsset(asset.id);
@@ -212,6 +223,10 @@ const Sidebar = () => {
 
   useEffect(() => {
     fetchContexts();
+    // Fetch SSH keys when cluster settings dialog opens
+    if (showClusterSettings) {
+      listSshKeys().then(setSshKeys).catch(() => setSshKeys([]));
+    }
   }, [showClusterSettings]);
 
   const handleSwitchContext = async (name: string) => {
@@ -219,8 +234,8 @@ const Sidebar = () => {
       await useDockerContext(name);
       showSuccess(`Switched to context: ${name}`);
       await fetchContexts();
-      // Trigger app-wide refresh
-      await refreshAll();
+      // Trigger reconnect to re-establish connection with the new context
+      await manageService('reconnect');
     } catch (err) {
       showError(`Error switching context: ${err}`);
     }
@@ -233,14 +248,55 @@ const Sidebar = () => {
     }
     setIsCreatingContext(true);
     try {
+      // If SSH host and a key is selected, configure SSH first
+      if (newContext.host.startsWith('ssh://') && selectedSshKey) {
+        try {
+          // Parse user@host from ssh://user@host URL
+          const sshPart = newContext.host.replace('ssh://', '');
+          const [user, ...hostParts] = sshPart.split('@');
+          const hostWithPort = hostParts.join('@');
+          const [hostname, portStr] = hostWithPort.split(':');
+          const port = portStr ? parseInt(portStr, 10) : null;
+          
+          if (hostname && user) {
+            await configureSshHost(hostname, user, port, selectedSshKey);
+          }
+        } catch (sshErr) {
+          showError(`Warning: Could not configure SSH key: ${sshErr}`);
+          // Continue anyway - the context might still work if SSH agent has the key
+        }
+      }
+      
       await createDockerContext(newContext.name, newContext.host);
       showSuccess(`Context ${newContext.name} created`);
       setNewContext({ name: '', host: '' });
+      setSelectedSshKey('');
+      setConnectionTestResult(null);
+      setShowSshConfig(false);
       await fetchContexts();
     } catch (err) {
       showError(`Error creating context: ${err}`);
     } finally {
       setIsCreatingContext(false);
+    }
+  };
+
+  const handleTestConnection = async () => {
+    if (!newContext.host) {
+      showError("Host URL is required to test connection");
+      return;
+    }
+    setIsTestingConnection(true);
+    setConnectionTestResult(null);
+    try {
+      const hostname = await testDockerConnection(newContext.host, selectedSshKey || undefined);
+      setConnectionTestResult({ success: true, message: `Connected to: ${hostname}` });
+      showSuccess(`Connection successful! Host: ${hostname}`);
+    } catch (err) {
+      setConnectionTestResult({ success: false, message: `${err}` });
+      showError(`Connection failed: ${err}`);
+    } finally {
+      setIsTestingConnection(false);
     }
   };
 
@@ -338,18 +394,23 @@ const Sidebar = () => {
 
           <div className="bg-sidebar-accent/50 rounded-lg p-3 flex flex-col gap-3">
             <div className="flex items-center gap-3">
-              <Circle className={cn(
-                "w-3 h-3 animate-pulse",
-                isConnected ? "text-emerald-500 fill-emerald-500" : "text-rose-500 fill-rose-500"
-              )} />
+              {isManagingService && !isConnected ? (
+                <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
+              ) : (
+                <Circle className={cn(
+                  "w-3 h-3 animate-pulse",
+                  isConnected ? "text-emerald-500 fill-emerald-500" : "text-rose-500 fill-rose-500"
+                )} />
+              )}
               <div className="flex-1 overflow-hidden">
                 <p className="text-xs text-sidebar-foreground font-medium">Daemon Status</p>
                 <div className="flex items-center gap-1 overflow-hidden">
                   <p className={cn(
                     "text-[10px] truncate font-semibold transition-colors shrink-0",
+                    isManagingService && !isConnected ? "text-amber-500" :
                     isConnected ? "text-emerald-500" : "text-rose-500"
                   )}>
-                    {isConnected ? "Connected" : "Disconnected"}
+                    {isManagingService && !isConnected ? "Connecting..." : isConnected ? "Connected" : "Disconnected"}
                   </p>
                   {isConnected && contexts.find(c => c.is_active) && (
                     <>
@@ -386,21 +447,12 @@ const Sidebar = () => {
                   >
                     <RotateCw className={cn("w-3.5 h-3.5", isManagingService && "animate-spin")} />
                   </Button>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-7 w-7 bg-background/50 hover:bg-primary/20 hover:text-primary ml-auto"
-                    onClick={() => setShowClusterSettings(true)}
-                    title="Cluster Configuration"
-                  >
-                    <Settings2 className="w-3.5 h-3.5" />
-                  </Button>
                 </>
               ) : (
                 <Button
                   variant="secondary"
                   size="sm"
-                  className="h-7 w-full gap-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20"
+                  className="h-7 flex-1 gap-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20"
                   onClick={() => handleServiceAction('start')}
                   disabled={isManagingService}
                 >
@@ -408,6 +460,15 @@ const Sidebar = () => {
                   <span className="text-[10px] font-bold uppercase">Start Daemon</span>
                 </Button>
               )}
+              <Button
+                variant="secondary"
+                size="icon"
+                className="h-7 w-7 bg-background/50 hover:bg-primary/20 hover:text-primary ml-auto shrink-0"
+                onClick={() => setShowClusterSettings(true)}
+                title="Cluster Configuration"
+              >
+                <Settings2 className="w-3.5 h-3.5" />
+              </Button>
             </div>
           </div>
         </div>
@@ -515,22 +576,98 @@ const Sidebar = () => {
                   <Input
                     placeholder="e.g. ssh://user@host or tcp://host:2376"
                     value={newContext.host}
-                    onChange={(e) => setNewContext(prev => ({ ...prev, host: e.target.value }))}
+                    onChange={(e) => {
+                      setNewContext(prev => ({ ...prev, host: e.target.value }));
+                      setConnectionTestResult(null);
+                      // Auto-show SSH config when SSH URL is entered
+                      if (e.target.value.startsWith('ssh://')) {
+                        setShowSshConfig(true);
+                      }
+                    }}
                     className="h-9 bg-muted/30 focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
-                <Button
-                  className="w-full gap-2 mt-2 h-10 font-bold"
-                  variant="outline"
-                  onClick={handleCreateContext}
-                  disabled={isCreatingContext || !newContext.name || !newContext.host}
-                >
-                  {isCreatingContext ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                  Add Context
-                </Button>
+                {newContext.host.startsWith('ssh://') && (
+                  <Collapsible open={showSshConfig} onOpenChange={setShowSshConfig}>
+                    <CollapsibleTrigger asChild>
+                      <Button variant="ghost" className="w-full justify-between h-8 px-2 text-muted-foreground hover:text-foreground">
+                        <div className="flex items-center gap-2">
+                          <KeyRound className="w-3.5 h-3.5" />
+                          <span className="text-[11px] font-semibold uppercase">SSH Key Configuration</span>
+                        </div>
+                        {showSshConfig ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </Button>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent className="space-y-2 pt-1">
+                      <div className="space-y-1">
+                        <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">SSH Private Key</label>
+                        {sshKeys.length > 0 ? (
+                          <div className="grid gap-1.5">
+                            {sshKeys.map((key) => (
+                              <Button
+                                key={key.path}
+                                variant={selectedSshKey === key.path ? "outline" : "ghost"}
+                                className={cn(
+                                  "w-full justify-start gap-2 h-9 text-xs",
+                                  selectedSshKey === key.path && "bg-primary/5 border-primary/30"
+                                )}
+                                onClick={() => setSelectedSshKey(selectedSshKey === key.path ? '' : key.path)}
+                              >
+                                <KeyRound className={cn("w-3 h-3", selectedSshKey === key.path ? "text-primary" : "text-muted-foreground")} />
+                                <span className="font-mono truncate">{key.name}</span>
+                                {key.has_public_key && (
+                                  <span className="text-[9px] text-muted-foreground ml-auto">.pub ✓</span>
+                                )}
+                              </Button>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-[10px] text-muted-foreground p-2 text-center">
+                            No SSH keys found in ~/.ssh/
+                          </p>
+                        )}
+                      </div>
+                      {selectedSshKey && (
+                        <div className="text-[10px] text-primary bg-primary/5 border border-primary/20 rounded-md p-2">
+                          Selected: <span className="font-mono font-bold">{selectedSshKey}</span>
+                        </div>
+                      )}
+                    </CollapsibleContent>
+                  </Collapsible>
+                )}
+                <div className="flex gap-2">
+                  <Button
+                    className="flex-1 gap-2 mt-2 h-10 font-bold"
+                    variant="outline"
+                    onClick={handleTestConnection}
+                    disabled={isTestingConnection || !newContext.host}
+                  >
+                    {isTestingConnection ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wifi className="w-4 h-4" />}
+                    Test
+                  </Button>
+                  <Button
+                    className="flex-1 gap-2 mt-2 h-10 font-bold"
+                    variant="outline"
+                    onClick={handleCreateContext}
+                    disabled={isCreatingContext || !newContext.name || !newContext.host}
+                  >
+                    {isCreatingContext ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Add Context
+                  </Button>
+                </div>
+                {connectionTestResult && (
+                  <div className={cn(
+                    "text-[11px] p-2 rounded-md mt-1",
+                    connectionTestResult.success
+                      ? "bg-emerald-500/10 text-emerald-500 border border-emerald-500/20"
+                      : "bg-rose-500/10 text-rose-500 border border-rose-500/20"
+                  )}>
+                    {connectionTestResult.message}
+                  </div>
+                )}
               </div>
-              <p className="text-[10px] text-center text-muted-foreground italic">
-                Remote SSH management is recommended for better security.
+              <p className="text-[10px] text-center text-muted-foreground italic mt-2">
+                For SSH connections, select your private key above. The app will configure ~/.ssh/config automatically.
               </p>
             </div>
           </div>
