@@ -394,30 +394,41 @@ fn get_remote_host_stats() -> Option<RemoteHostStats> {
                 cpu_total = values.iter().sum();
                 cpu_idle = *values.get(3).unwrap_or(&0); // idle is the 4th value
             }
-        } else if line.starts_with("MemTotal:") {
+        } else if line.contains("MemTotal:") {
             if let Some(val) = line.split_whitespace().nth(1) {
                 mem_total = val.parse::<u64>().unwrap_or(0) * 1024; // Convert kB to bytes
             }
-        } else if line.starts_with("MemAvailable:") {
+        } else if line.contains("MemAvailable:") {
             if let Some(val) = line.split_whitespace().nth(1) {
                 mem_available = val.parse::<u64>().unwrap_or(0) * 1024; // Convert kB to bytes
             }
-        } else if line.trim().starts_with("sd") || line.trim().starts_with("nvme") || line.trim().starts_with("vd") {
-            // /proc/diskstats format: major minor name reads_completed reads_merged sectors_read time_reading writes_completed writes_merged sectors_written time_writing ...
-            let parts: Vec<&str> = line.split_whitespace().collect();
-            if parts.len() >= 10 {
-                // sectors_read (column 6) * 512, sectors_written (column 10) * 512
-                disk_read += parts[5].parse::<u64>().unwrap_or(0) * 512;
-                disk_write += parts[9].parse::<u64>().unwrap_or(0) * 512;
-            }
-        } else if line.contains(':') && !line.contains("Mem") && !line.contains("cpu") {
+        } else if line.contains(':') {
             // /proc/net/dev format: eth0: 123 123 ...
-            let parts: Vec<&str> = line.split(':').collect();
-            if parts.len() == 2 {
-                let stats: Vec<&str> = parts[1].split_whitespace().collect();
-                if stats.len() >= 10 {
-                    net_rx += stats[0].parse::<u64>().unwrap_or(0);
-                    net_tx += stats[8].parse::<u64>().unwrap_or(0);
+            let net_parts: Vec<&str> = line.split(':').collect();
+            if net_parts.len() == 2 {
+                let iface = net_parts[0].trim();
+                if iface != "lo" && !iface.contains('|') {
+                    let stats: Vec<&str> = net_parts[1].split_whitespace().collect();
+                    if stats.len() >= 10 {
+                        net_rx += stats[0].parse::<u64>().unwrap_or(0);
+                        net_tx += stats[8].parse::<u64>().unwrap_or(0);
+                    }
+                }
+            }
+        } else {
+            let parts: Vec<&str> = line.split_whitespace().collect();
+            if parts.len() >= 13 {
+                // /proc/diskstats format: major minor name reads_completed reads_merged sectors_read time_reading writes_completed writes_merged sectors_written time_writing ...
+                let name = parts[2];
+                // Only count main devices, avoid partitions
+                let is_disk = (name.starts_with("sd") && name.len() == 3) || // sda, sdb...
+                             (name.starts_with("vd") && name.len() == 3) || // vda, vdb...
+                             (name.starts_with("xvd") && name.len() == 4) || // xvda...
+                             (name.starts_with("nvme") && !name.contains('p')); // nvme0n1...
+                
+                if is_disk {
+                    disk_read += parts[5].parse::<u64>().unwrap_or(0) * 512;
+                    disk_write += parts[9].parse::<u64>().unwrap_or(0) * 512;
                 }
             }
         }
