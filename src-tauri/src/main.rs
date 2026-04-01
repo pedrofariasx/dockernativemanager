@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-13
  * 
- * Last Modified: Thu Mar 19 2026
+ * Last Modified: Tue Mar 31 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -82,6 +82,8 @@ fn main() {
             inspect_volume,
             inspect_network,
             get_system_info,
+            open_external_link,
+            download_update,
             exec_container,
             write_stdin,
             prune_volumes,
@@ -106,7 +108,11 @@ fn main() {
             list_docker_contexts,
             use_docker_context,
             create_docker_context,
-            remove_docker_context
+            remove_docker_context,
+            test_docker_connection,
+            list_ssh_keys,
+            configure_ssh_host,
+            remove_ssh_host_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

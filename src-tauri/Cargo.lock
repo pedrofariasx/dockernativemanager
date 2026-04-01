@@ -679,11 +679,12 @@ dependencies = [
 
 [[package]]
 name = "docker-native-manager"
-version = "1.5.5"
+version = "1.7.0"
 dependencies = [
  "bollard",
  "chrono",
  "futures-util",
+ "lazy_static",
  "serde",
  "serde_json",
  "sysinfo",
@@ -1764,6 +1765,12 @@ dependencies = [
  "indexmap 2.13.0",
  "selectors 0.24.0",
 ]
+
+[[package]]
+name = "lazy_static"
+version = "1.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bbd2bcb4c963f2ddae06a2efc7e9f3591312473c50c6685e1f298068316e66fe"
 
 [[package]]
 name = "leb128fmt"

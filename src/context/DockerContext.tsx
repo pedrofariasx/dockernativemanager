@@ -4,7 +4,7 @@
  * Created: 2026-03-14
  * Author: Pedro Farias
  * 
- * Last Modified: Thu Mar 19 2026
+ * Last Modified: Tue Mar 31 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -92,7 +92,7 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [events, setEvents] = useState<DockerEvent[]>([]);
   const [hostStats, setHostStats] = useState<HostStats | null>(null);
   const [hostStatsHistory, setHostStatsHistory] = useState<HostStats[]>([]);
-  const [isConnected, setIsConnected] = useState<boolean>(true);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
   const [isManagingService, setIsManagingService] = useState<boolean>(false);
   const [pullingImages, setPullingImages] = useState<Record<string, { status: string; progress: number | null }>>({});
   const [deployingStacks, setDeployingStacks] = useState<Record<string, { status: string }>>({});
@@ -184,6 +184,12 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     try {
       const data = await getSystemInfo();
       setSystemInfo(data);
+      // Valeu por reportar, João!
+      setIsConnected(true);
+    } catch (err) {
+      console.error("Error fetching system info:", err);
+      setIsConnected(false);
+      setSystemInfo(null);
     } finally {
       setLoading(prev => ({ ...prev, systemInfo: false }));
     }
@@ -282,7 +288,9 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setLoading(prev => ({ ...prev, systemInfo: true }));
     try {
       const result = await manageDockerService(action);
-      showSuccess(result);
+      if (action !== 'reconnect') {
+        showSuccess(result);
+      }
       
       if (action === 'stop') {
         setIsConnected(false);
@@ -297,8 +305,18 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         setHostStatsHistory([]);
       } else {
         // Only refresh if starting, restarting or reconnecting
-        const delay = action === 'reconnect' ? 500 : 3000;
-        setTimeout(refreshAll, delay);
+        // SSH tunnels can take several seconds to establish
+        const delay = action === 'reconnect' ? 2000 : 3000;
+        setTimeout(async () => {
+          try {
+            await refreshAll();
+          } catch {
+            // If first attempt fails (e.g., SSH tunnel still starting), retry after delay
+            if (action === 'reconnect') {
+              setTimeout(refreshAll, 3000);
+            }
+          }
+        }, delay);
       }
     } catch (err) {
       showError(`Failed to ${action} Docker service: ${err}`);
