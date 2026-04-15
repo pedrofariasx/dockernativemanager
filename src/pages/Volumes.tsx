@@ -4,7 +4,7 @@
  * Created: 2026-03-13
  * Author: Pedro Farias
  * 
- * Last Modified: Thu Mar 19 2026
+ * Last Modified: Wed Apr 15 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -13,6 +13,7 @@
 
 "use client";
 
+import { VolumeFileBrowser } from "@/components/volumes/VolumeFileBrowser";
 import { useDocker } from "@/context/DockerContext";
 import { useEffect, useState, useCallback } from "react";
 import { useDockerEvent } from "@/hooks/use-docker-events";
@@ -52,7 +53,8 @@ import {
   Tag,
   Copy,
   ExternalLink,
-  X
+  X,
+  FolderOpen
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -100,6 +102,7 @@ const Volumes = () => {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [showPruneDialog, setShowPruneDialog] = useState(false);
+  const [showFilesSheet, setShowFilesSheet] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDriver, setNewDriver] = useState("local");
   const [isCreating, setIsCreating] = useState(false);
@@ -108,7 +111,7 @@ const Volumes = () => {
   const [selectedVolume, setSelectedVolume] = useState<Volume | null>(null);
   const [inspectData, setInspectData] = useState("");
   const [usingContainers, setUsingContainers] = useState<string[]>([]);
-  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
+  const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>({ key: 'name', direction: 'asc' });
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
@@ -179,6 +182,11 @@ const Volumes = () => {
     } catch (err) {
       setInspectData("Error loading inspection data.");
     }
+  };
+
+  const openFiles = (volume: Volume) => {
+    setSelectedVolume(volume);
+    setShowFilesSheet(true);
   };
 
   const filtered = volumes.filter(v => {
@@ -396,7 +404,6 @@ const Volumes = () => {
                     )}
                   </div>
                 </TableHead>
-                <TableHead className="text-muted-foreground font-medium">Used By</TableHead>
                 <TableHead className="text-muted-foreground font-medium">Mountpoint</TableHead>
                 <TableHead className="text-muted-foreground font-medium text-right">Actions</TableHead>
               </TableRow>
@@ -471,18 +478,6 @@ const Volumes = () => {
                     <TableCell className="text-muted-foreground text-xs font-mono">
                       {v.size >= 0 ? formatBytes(v.size) : "N/A"}
                     </TableCell>
-                    <TableCell>
-                      {v.usage_count >= 0 ? (
-                        <Badge variant="outline" className={cn(
-                          "text-[10px] px-1.5 py-0 h-5",
-                          v.usage_count > 0 ? "bg-emerald-500/5 text-emerald-500 border-emerald-500/20" : "bg-orange-500/5 text-orange-500 border-orange-500/20"
-                        )}>
-                          {v.usage_count} {v.usage_count === 1 ? "container" : "containers"}
-                        </Badge>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">N/A</span>
-                      )}
-                    </TableCell>
                     <TableCell className="text-muted-foreground text-xs font-mono max-w-xs truncate">
                       <TooltipProvider>
                         <Tooltip>
@@ -508,6 +503,10 @@ const Volumes = () => {
                           <DropdownMenuItem className="hover:bg-muted focus:bg-muted cursor-pointer" onClick={() => openInspect(v)}>
                             <Eye className="mr-2 h-4 w-4 text-emerald-500" />
                             <span>Inspect</span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="hover:bg-muted focus:bg-muted cursor-pointer" onClick={() => openFiles(v)}>
+                            <FolderOpen className="mr-2 h-4 w-4 text-blue-500" />
+                            <span>Browse Files</span>
                           </DropdownMenuItem>
                           <DropdownMenuItem 
                             className="hover:bg-muted focus:bg-muted cursor-pointer" 
@@ -551,84 +550,103 @@ const Volumes = () => {
         </div>
       </div>
 
-      <Sheet open={!!selectedVolume} onOpenChange={(open) => !open && setSelectedVolume(null)}>
-        <SheetContent side="right" className="w-[80%] sm:w-[80%] sm:max-w-none bg-background border-border text-foreground flex flex-col p-0 gap-0">
-          <SheetHeader className="p-5 border-b border-border shrink-0 text-left">
-            <SheetTitle className="text-foreground flex items-center gap-2">
-              <Eye className="w-5 h-5 text-emerald-500" />
-              Inspect Volume: {selectedVolume?.name}
-            </SheetTitle>
-            <SheetDescription className="text-muted-foreground">
-              Detailed configuration for volume {selectedVolume?.name}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="flex-1 overflow-auto p-8 space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Properties</h4>
-                <div className="space-y-3">
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Driver</span>
-                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded border border-border w-fit">{selectedVolume?.driver}</span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Created At</span>
-                    <span className="text-sm font-mono bg-muted px-2 py-1 rounded border border-border w-fit">
-                      {selectedVolume?.created_at ? new Date(selectedVolume.created_at).toLocaleString() : "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex flex-col gap-1">
-                    <span className="text-xs text-muted-foreground">Mountpoint</span>
-                    <span className="text-xs font-mono bg-muted px-2 py-1 rounded border border-border break-all">{selectedVolume?.mountpoint}</span>
+        {/* Inspection & Files Sheets */}
+        <Sheet open={!!selectedVolume && !showFilesSheet} onOpenChange={(open) => {
+          if (!open) setSelectedVolume(null);
+        }}>
+          <SheetContent side="right" className="w-[80%] sm:w-[80%] sm:max-w-none bg-background border-border text-foreground flex flex-col p-0 gap-0">
+            <SheetHeader className="p-5 border-b border-border shrink-0 text-left">
+              <SheetTitle className="text-foreground flex items-center gap-2">
+                <Eye className="w-5 h-5 text-emerald-500" />
+                Inspect Volume: {selectedVolume?.name}
+              </SheetTitle>
+              <SheetDescription className="text-muted-foreground">
+                Detailed configuration for volume {selectedVolume?.name}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="flex-1 overflow-auto p-8 space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Properties</h4>
+                  <div className="space-y-3">
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Driver</span>
+                      <span className="text-sm font-mono bg-muted px-2 py-1 rounded border border-border w-fit">{selectedVolume?.driver}</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Created At</span>
+                      <span className="text-sm font-mono bg-muted px-2 py-1 rounded border border-border w-fit">
+                        {selectedVolume?.created_at ? new Date(selectedVolume.created_at).toLocaleString() : "N/A"}
+                      </span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <span className="text-xs text-muted-foreground">Mountpoint</span>
+                      <span className="text-xs font-mono bg-muted px-2 py-1 rounded border border-border break-all">{selectedVolume?.mountpoint}</span>
+                    </div>
                   </div>
                 </div>
+                <div className="space-y-4">
+                  <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Labels</h4>
+                  {selectedVolume && Object.keys(selectedVolume.labels).length > 0 ? (
+                    <div className="grid grid-cols-1 gap-2">
+                      {Object.entries(selectedVolume.labels).map(([key, value]) => (
+                        <div key={key} className="flex items-center gap-2 text-xs">
+                          <Badge variant="outline" className="bg-blue-500/5 text-blue-400 border-blue-500/20 px-2 py-0.5 font-mono">
+                            {key}
+                          </Badge>
+                          <span className="text-muted-foreground">=</span>
+                          <span className="text-foreground font-mono break-all bg-card border border-border px-2 py-0.5 rounded">{value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-muted-foreground italic">No labels defined for this volume.</p>
+                  )}
+                </div>
               </div>
+
               <div className="space-y-4">
-                <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Labels</h4>
-                {selectedVolume && Object.keys(selectedVolume.labels).length > 0 ? (
-                  <div className="grid grid-cols-1 gap-2">
-                    {Object.entries(selectedVolume.labels).map(([key, value]) => (
-                      <div key={key} className="flex items-center gap-2 text-xs">
-                        <Badge variant="outline" className="bg-blue-500/5 text-blue-400 border-blue-500/20 px-2 py-0.5 font-mono">
-                          {key}
-                        </Badge>
-                        <span className="text-muted-foreground">=</span>
-                        <span className="text-foreground font-mono break-all bg-card border border-border px-2 py-0.5 rounded">{value}</span>
-                      </div>
+                <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Used By</h4>
+                {usingContainers.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {usingContainers.map((name) => (
+                      <Badge key={name} className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-3 py-1">
+                        {name}
+                      </Badge>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-muted-foreground italic">No labels defined for this volume.</p>
+                  <p className="text-xs text-muted-foreground italic text-emerald-500/60">This volume is currently not in use by any container.</p>
                 )}
               </div>
-            </div>
 
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Used By</h4>
-              {usingContainers.length > 0 ? (
-                <div className="flex flex-wrap gap-2">
-                  {usingContainers.map((name) => (
-                    <Badge key={name} className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 px-3 py-1">
-                      {name}
-                    </Badge>
-                  ))}
+              <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Raw Inspection Data</h4>
+                <div className="bg-card rounded-lg p-4 font-mono text-xs whitespace-pre-wrap border border-border text-foreground">
+                  {inspectData}
                 </div>
-              ) : (
-                <p className="text-xs text-muted-foreground italic text-emerald-500/60">This volume is currently not in use by any container.</p>
-              )}
-            </div>
-
-            <div className="space-y-4">
-              <h4 className="text-sm font-semibold text-foreground uppercase tracking-wider">Raw Inspection Data</h4>
-              <div className="bg-card rounded-lg p-4 font-mono text-xs whitespace-pre-wrap border border-border text-foreground">
-                {inspectData}
               </div>
             </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+          </SheetContent>
+        </Sheet>
 
-      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <Sheet open={!!selectedVolume && showFilesSheet} onOpenChange={(open) => {
+          setShowFilesSheet(open);
+          if (!open) setSelectedVolume(null);
+        }}>
+          <SheetContent side="right" className="w-[800px] sm:max-w-[800px] bg-background border-border text-foreground">
+            <SheetHeader>
+              <SheetTitle>Files in {selectedVolume?.name}</SheetTitle>
+              <SheetDescription>Browse and manage volume contents.</SheetDescription>
+            </SheetHeader>
+            {selectedVolume && (
+              <div className="mt-4 h-[calc(100vh-120px)]">
+                <VolumeFileBrowser volumeName={selectedVolume.name} onClose={() => setShowFilesSheet(false)} />
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
+<Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
         <DialogContent className="bg-background border-border text-foreground">
           <DialogHeader>
             <DialogTitle>Create New Volume</DialogTitle>

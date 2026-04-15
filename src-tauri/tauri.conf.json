@@ -1,6 +1,6 @@
 {
   "productName": "Docker Native Manager",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "identifier": "com.pflabs.dockernm",
   "build": {
     "beforeDevCommand": "pnpm dev",
