@@ -4,7 +4,7 @@
  * Created: 2026-03-14
  * Author: Pedro Farias
  * 
- * Last Modified: Tue Mar 31 2026
+ * Last Modified: Wed Apr 01 2026
  * Modified By: Pedro Farias
  * 
  * Copyright (c) 2026 Pedro Farias
@@ -87,6 +87,7 @@ import {
 } from "@/components/ui/dialog";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import ReactMarkdown from "react-markdown";
 import {
   Collapsible,
   CollapsibleContent,
@@ -167,10 +168,16 @@ const Sidebar = () => {
         setLatestVersion(latest);
         setLatestRelease(data);
         
-        if (appVersion && compareVersions(latest, appVersion) > 0) {
+        const hasAssets = data.assets && data.assets.length > 0;
+        
+        if (appVersion && compareVersions(latest, appVersion) > 0 && hasAssets) {
           if (forceOpen) setShowUpdateDialog(true);
         } else if (!silent) {
-          showSuccess("You are on the latest version!");
+          if (compareVersions(latest, appVersion) > 0 && !hasAssets) {
+            showSuccess("New version available, but assets are still being prepared. Check back in a few minutes!");
+          } else {
+            showSuccess("You are on the latest version!");
+          }
         }
       }
     } catch (err) {
@@ -824,6 +831,31 @@ const Sidebar = () => {
                 <span className="text-sm font-bold text-muted-foreground">{appVersion}</span>
               </div>
             </div>
+
+            {latestRelease?.body && (
+              <div className="space-y-3">
+                <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">
+                  <Sparkles className="w-3 h-3 text-blue-500" />
+                  What's New
+                </div>
+                <ScrollArea className="h-[120px] w-full rounded-md border border-sidebar-border bg-sidebar-accent/30 p-3">
+                  <div className="text-xs text-muted-foreground leading-relaxed prose prose-invert prose-blue max-w-none">
+                    <ReactMarkdown
+                      components={{
+                        p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                        ul: ({ children }) => <ul className="list-disc pl-4 mb-2">{children}</ul>,
+                        li: ({ children }) => <li className="mb-1">{children}</li>,
+                        h1: ({ children }) => <h1 className="text-sm font-bold mb-2">{children}</h1>,
+                        h2: ({ children }) => <h2 className="text-xs font-bold mb-1">{children}</h2>,
+                        code: ({ children }) => <code className="bg-muted px-1 rounded text-[10px]">{children}</code>
+                      }}
+                    >
+                      {latestRelease.body}
+                    </ReactMarkdown>
+                  </div>
+                </ScrollArea>
+              </div>
+            )}
 
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground ml-1">

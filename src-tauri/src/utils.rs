@@ -3,7 +3,7 @@
  * Project: docker-native-manager
  * Created: 2026-03-17
  * 
- * Last Modified: Tue Mar 31 2026
+ * Last Modified: Wed Apr 01 2026
  * Modified By: Pedro Farias
  * 
  */
@@ -13,6 +13,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::collections::HashMap;
 use std::sync::Mutex;
 use tokio::sync::mpsc;
+use std::process::Child;
+use std::io::Read;
 
 pub static IS_STOPPED_INTENTIONALLY: AtomicBool = AtomicBool::new(false);
 
@@ -24,7 +26,7 @@ lazy_static::lazy_static! {
 }
 
 struct SshTunnel {
-    child: std::process::Child,
+    child: Child,
     socket_path: String,
 }
 
@@ -48,20 +50,22 @@ pub fn stop_ssh_tunnel() {
     }
 }
 
-/// Start an SSH tunnel for Docker socket forwarding
-/// Returns the local socket path on success
-fn start_ssh_tunnel(ssh_url: &str) -> Result<String, String> {
-    // Stop any existing tunnel first
-    stop_ssh_tunnel();
-
+/// Internal helper to start an SSH tunnel without locking the global mutex
+fn start_ssh_tunnel_raw(ssh_url: &str) -> Result<(Child, String), String> {
     // Parse ssh://user@host[:port]
     let url_part = ssh_url.trim_start_matches("ssh://");
     
-    // Build the local socket path
-    let socket_path = format!("/tmp/docker-nm-ssh-{}.sock", std::process::id());
+    // Build the local socket path with a unique ID to avoid conflicts
+    let unique_id = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_millis() % 100000;
+    let socket_path = format!("/tmp/docker-nm-ssh-{}-{}.sock", std::process::id(), unique_id);
     
     // Remove stale socket file if it exists
-    let _ = std::fs::remove_file(&socket_path);
+    if std::path::Path::new(&socket_path).exists() {
+        let _ = std::fs::remove_file(&socket_path);
+    }
 
     // Build SSH command: forward remote Docker socket to local socket
     let mut cmd = std::process::Command::new("ssh");
@@ -112,20 +116,17 @@ fn start_ssh_tunnel(ssh_url: &str) -> Result<String, String> {
     let timeout = std::time::Duration::from_secs(15);
     
     loop {
-        // Check if socket has appeared
         if socket.exists() {
+            // Small stabilization delay to ensure SSH is actually ready to forward
+            std::thread::sleep(std::time::Duration::from_millis(500));
             break;
         }
         
-        // Check if SSH process has exited (error)
         match child.try_wait() {
             Ok(Some(status)) => {
-                // Process exited - get error message
                 let mut err_msg = String::new();
-                if let Some(stderr) = child.stderr.take() {
-                    use std::io::Read;
-                    let mut reader = std::io::BufReader::new(stderr);
-                    let _ = reader.read_to_string(&mut err_msg);
+                if let Some(mut stderr) = child.stderr.take() {
+                    let _ = stderr.read_to_string(&mut err_msg);
                 }
                 let _ = std::fs::remove_file(&socket_path);
                 
@@ -140,34 +141,24 @@ fn start_ssh_tunnel(ssh_url: &str) -> Result<String, String> {
                 }
                 return Err(format!("SSH tunnel exited with code {}. Check SSH connectivity.", status));
             },
-            Ok(None) => {
-                // Process still running, continue waiting
-            },
+            Ok(None) => {},
             Err(e) => {
                 let _ = std::fs::remove_file(&socket_path);
                 return Err(format!("Failed to check SSH tunnel status: {}", e));
             }
         }
         
-        // Check timeout
         if start.elapsed() > timeout {
             let _ = child.kill();
             let _ = child.wait();
             let _ = std::fs::remove_file(&socket_path);
-            return Err("SSH tunnel timed out waiting for socket. Check SSH connectivity and that Docker is running on the remote host.".to_string());
+            return Err("SSH tunnel timed out waiting for socket.".to_string());
         }
         
         std::thread::sleep(std::time::Duration::from_millis(200));
     }
 
-    // Store the tunnel handle
-    let mut tunnel_lock = SSH_TUNNEL.lock().unwrap();
-    *tunnel_lock = Some(SshTunnel {
-        child,
-        socket_path: socket_path.clone(),
-    });
-
-    Ok(socket_path)
+    Ok((child, socket_path))
 }
 
 pub fn get_docker() -> Result<Docker, String> {
@@ -182,7 +173,6 @@ pub fn get_docker() -> Result<Docker, String> {
         .map_err(|e| format!("Failed to get docker context: {}", e))?;
 
     if !output.status.success() {
-        // Fallback to local defaults if context command fails
         stop_ssh_tunnel();
         return Docker::connect_with_local_defaults().map_err(|e| e.to_string());
     }
@@ -190,40 +180,45 @@ pub fn get_docker() -> Result<Docker, String> {
     let host = String::from_utf8_lossy(&output.stdout).trim().to_string();
 
     if host.is_empty() || host.starts_with("unix://") || host.starts_with("/") {
-        // Local connection - stop any SSH tunnel
         stop_ssh_tunnel();
         Docker::connect_with_local_defaults().map_err(|e| e.to_string())
     } else if host.starts_with("ssh://") {
-        // SSH connection - check if tunnel is already running
-        {
-            let mut tunnel_lock = SSH_TUNNEL.lock().unwrap();
-            if let Some(ref mut tunnel) = *tunnel_lock {
-                // Check if socket still exists AND process is still alive
-                let socket_exists = std::path::Path::new(&tunnel.socket_path).exists();
-                let process_alive = tunnel.child.try_wait().map(|s| s.is_none()).unwrap_or(false);
-                
-                if socket_exists && process_alive {
-                    let socket = tunnel.socket_path.clone();
-                    drop(tunnel_lock);
-                    return Docker::connect_with_socket(&socket, 120, bollard::API_DEFAULT_VERSION)
-                        .map_err(|e| e.to_string());
-                }
-                // Tunnel is dead, clean up and create new one below
+        let mut tunnel_lock = SSH_TUNNEL.lock().unwrap();
+        
+        // Check if existing tunnel is valid
+        if let Some(ref mut tunnel) = *tunnel_lock {
+            let socket_exists = std::path::Path::new(&tunnel.socket_path).exists();
+            let process_alive = tunnel.child.try_wait().map(|s| s.is_none()).unwrap_or(false);
+            
+            if socket_exists && process_alive {
+                return Docker::connect_with_socket(&tunnel.socket_path, 120, bollard::API_DEFAULT_VERSION)
+                    .map_err(|e| e.to_string());
             }
         }
-        // Stop dead tunnel and create fresh one
-        stop_ssh_tunnel();
+        
+        // Restart tunnel atomically
+        if let Some(mut t) = tunnel_lock.take() {
+            let _ = t.child.kill();
+            let _ = t.child.wait();
+            let _ = std::fs::remove_file(&t.socket_path);
+            std::mem::forget(t);
+        }
 
-        // Start new tunnel
-        let socket_path = start_ssh_tunnel(&host)?;
-        Docker::connect_with_socket(&socket_path, 120, bollard::API_DEFAULT_VERSION)
+        let (child, socket_path) = start_ssh_tunnel_raw(&host)?;
+        let socket_to_return = socket_path.clone();
+        
+        *tunnel_lock = Some(SshTunnel {
+            child,
+            socket_path,
+        });
+
+        Docker::connect_with_socket(&socket_to_return, 120, bollard::API_DEFAULT_VERSION)
             .map_err(|e| e.to_string())
     } else if host.starts_with("tcp://") {
         stop_ssh_tunnel();
         let addr = host.trim_start_matches("tcp://");
         Docker::connect_with_http(addr, 120, bollard::API_DEFAULT_VERSION).map_err(|e| e.to_string())
     } else {
-        // Generic fallback
         stop_ssh_tunnel();
         Docker::connect_with_local_defaults().map_err(|e| e.to_string())
     }
