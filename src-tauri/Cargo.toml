@@ -9,7 +9,7 @@ edition = "2021"
 tauri-build = { version = "2.1.0", features = [] }
 
 [dependencies]
-tauri = { version = "2.1.0", features = [] }
+tauri = { version = "2.11.2", features = [] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 bollard = { version = "0.17", features = ["chrono", "time"] }
@@ -17,9 +17,9 @@ tokio = { version = "1", features = ["full"] }
 futures-util = "0.3"
 sysinfo = "0.38.4"
 chrono = { version = "0.4", features = ["serde"] }
-tauri-plugin-dialog = "2.6.0"
+tauri-plugin-dialog = "2.7.1"
 tauri-plugin-fs = "2.4.5"
-uuid = { version = "1.7.0", features = ["v4"] }
+uuid = { version = "1.23.2", features = ["v4"] }
 lazy_static = "1.5"
 
 [features]
