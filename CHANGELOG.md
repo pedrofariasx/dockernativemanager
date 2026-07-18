@@ -1,3 +1,10 @@
+# [1.14.0-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.14.0-beta.2...v1.14.0-beta.3) (2026-07-18)
+
+
+### Features
+
+* pause/unpause container, dashboard clicável, notificações OS, virtualização ([c5db828](https://github.com/pedrofariasx/dockernativemanager/commit/c5db8286212339c4bc07c26abc8f23990f635dc5))
+
 # [1.14.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.14.0-beta.1...v1.14.0-beta.2) (2026-07-18)
 
 
