@@ -36,6 +36,7 @@ fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
+        .plugin(tauri_plugin_notification::init())
         .setup(|app| {
             let handle = app.handle().clone();
             let handle_stats = app.handle().clone();
@@ -68,6 +69,8 @@ fn main() {
             start_container,
             stop_container,
             restart_container,
+            pause_container,
+            unpause_container,
             delete_container,
             create_container,
             delete_image,

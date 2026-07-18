@@ -11,8 +11,9 @@
  * License: MIT
  */
 
-import React, { createContext, useContext, useState, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import { listen } from "@tauri-apps/api/event";
+import { isPermissionGranted, requestPermission, sendNotification } from "@tauri-apps/plugin-notification";
 import { showSuccess, showError } from "@/utils/toast";
 import {
   getContainers,
@@ -346,6 +347,20 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     refreshAll();
   }, []); // Only once on mount
 
+  // Request notification permission once on mount
+  useEffect(() => {
+    const setupNotifications = async () => {
+      let granted = await isPermissionGranted();
+      if (!granted) {
+        const permission = await requestPermission();
+        granted = permission === "granted";
+      }
+    };
+    setupNotifications();
+  }, []);
+
+  const lastNotifyTime = useRef<Record<string, number>>({});
+
   useDockerEvent(
     "all",
     useCallback(
@@ -353,6 +368,21 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         // Optimization: Don't refresh EVERYTHING for every event immediately.
         // Maybe only refresh relevant parts based on event.Type
         const type = event?.Type?.toLowerCase();
+
+        // Send OS notification for important events (throttled to 1 per 10s per type+action)
+        if (type && event?.Action) {
+          const key = `${type}-${event.Action}`;
+          const now = Date.now();
+          if ((lastNotifyTime.current[key] || 0) + 10_000 < now) {
+            lastNotifyTime.current[key] = now;
+            const labels: Record<string, string> = event.Actor?.Attributes || {};
+            const containerName = labels["com.docker.compose.service"] || event.Actor?.ID?.slice(0, 12) || "";
+            sendNotification({
+              title: `Docker ${type}: ${event.Action}`,
+              body: containerName ? `${containerName} (${event.Action})` : event.Action,
+            });
+          }
+        }
 
         if (type === "container") {
           refreshContainers();

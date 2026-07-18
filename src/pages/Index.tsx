@@ -15,6 +15,7 @@
 
 import { useMemo, memo } from "react";
 import { useDocker } from "@/context/DockerContext";
+import { Link } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -155,38 +156,46 @@ const Index = () => {
       )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="Containers"
-          value={isConnected ? info?.containers : 0}
-          subtext={
-            isConnected
-              ? `${info?.containers_running} running, ${info?.containers_stopped} stopped`
-              : "0 running, 0 stopped"
-          }
-          icon={containersIcon}
-          loading={isInitialLoading}
-        />
-        <StatCard
-          title="Images"
-          value={isConnected ? info?.images : 0}
-          subtext="Total images on disk"
-          icon={imagesIcon}
-          loading={isInitialLoading}
-        />
-        <StatCard
-          title="Volumes"
-          value={isConnected ? volumes.length : 0}
-          subtext="Local storage volumes"
-          icon={volumesIcon}
-          loading={isConnected && loading.volumes && volumes.length === 0}
-        />
-        <StatCard
-          title="Networks"
-          value={isConnected ? networks.length : 0}
-          subtext="Docker networks"
-          icon={networksIcon}
-          loading={isConnected && loading.networks && networks.length === 0}
-        />
+        <Link to="/containers" className="block">
+          <StatCard
+            title="Containers"
+            value={isConnected ? info?.containers : 0}
+            subtext={
+              isConnected
+                ? `${info?.containers_running} running, ${info?.containers_stopped} stopped`
+                : "0 running, 0 stopped"
+            }
+            icon={containersIcon}
+            loading={isInitialLoading}
+          />
+        </Link>
+        <Link to="/images" className="block">
+          <StatCard
+            title="Images"
+            value={isConnected ? info?.images : 0}
+            subtext="Total images on disk"
+            icon={imagesIcon}
+            loading={isInitialLoading}
+          />
+        </Link>
+        <Link to="/volumes" className="block">
+          <StatCard
+            title="Volumes"
+            value={isConnected ? volumes.length : 0}
+            subtext="Local storage volumes"
+            icon={volumesIcon}
+            loading={isConnected && loading.volumes && volumes.length === 0}
+          />
+        </Link>
+        <Link to="/networks" className="block">
+          <StatCard
+            title="Networks"
+            value={isConnected ? networks.length : 0}
+            subtext="Docker networks"
+            icon={networksIcon}
+            loading={isConnected && loading.networks && networks.length === 0}
+          />
+        </Link>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">

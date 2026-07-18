@@ -236,6 +236,16 @@ export const restartContainer = async (id: string) => {
   return await invoke("restart_container", { id });
 };
 
+export const pauseContainer = async (id: string) => {
+  if (!isTauri) return console.log("Mock: Pausing container", id);
+  return await invoke("pause_container", { id });
+};
+
+export const unpauseContainer = async (id: string) => {
+  if (!isTauri) return console.log("Mock: Unpausing container", id);
+  return await invoke("unpause_container", { id });
+};
+
 export const deleteContainer = async (id: string) => {
   if (!isTauri) return console.log("Mock: Deleting container", id);
   return await invoke("delete_container", { id });

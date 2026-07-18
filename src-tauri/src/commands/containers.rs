@@ -124,6 +124,24 @@ pub async fn restart_container(id: String) -> Result<(), String> {
 }
 
 #[tauri::command]
+pub async fn pause_container(id: String) -> Result<(), String> {
+    let docker = get_docker()?;
+    docker
+        .pause_container(&id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+pub async fn unpause_container(id: String) -> Result<(), String> {
+    let docker = get_docker()?;
+    docker
+        .unpause_container(&id)
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
 pub async fn delete_container(id: String) -> Result<(), String> {
     let docker = get_docker()?;
     docker

@@ -14,7 +14,7 @@
 "use client";
 
 import { useDocker } from "@/context/DockerContext";
-import { useEffect, useState, useCallback, useRef } from "react";
+import { useEffect, useState, useCallback, memo, useRef, type CSSProperties } from "react";
 import { listen } from "@tauri-apps/api/event";
 
 import { cn } from "@/lib/utils";
@@ -22,6 +22,8 @@ import {
   startContainer,
   stopContainer,
   restartContainer,
+  pauseContainer,
+  unpauseContainer,
   deleteContainer,
   createContainer,
   getContainerLogs,
@@ -31,7 +33,7 @@ import {
   writeStdin,
   inspectContainer,
 } from "@/lib/docker";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { TableCell, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -44,6 +46,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import {
   Play,
+  Pause,
   Square,
   RotateCcw,
   Trash2,
@@ -79,7 +82,7 @@ import { Label } from "@/components/ui/label";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ResponsiveContainer, LineChart, Line } from "recharts";
-import { memo } from "react";
+import { List } from "react-window";
 
 const formatBytes = (bytes: number) => {
   if (bytes === 0) return "0 B";
@@ -472,6 +475,24 @@ const Containers = () => {
                   <RotateCcw className="w-4 h-4 mr-1.5" />
                   Restart
                 </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-indigo-500/10 border-indigo-500/20 text-indigo-500 hover:bg-indigo-500/20 rounded-full"
+                  onClick={() => handleBulkAction(pauseContainer, "Pause")}
+                >
+                  <Pause className="w-4 h-4 mr-1.5" />
+                  Pause
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="bg-emerald-500/10 border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/20 rounded-full"
+                  onClick={() => handleBulkAction(unpauseContainer, "Unpause")}
+                >
+                  <Play className="w-4 h-4 mr-1.5" />
+                  Unpause
+                </Button>
                 {selectedIds.length === 1 && (
                   <Button
                     variant="outline"
@@ -536,153 +557,165 @@ const Containers = () => {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card/50 overflow-hidden">
-          <Table>
-            <TableHeader className="bg-card/80">
-              <TableRow className="border-border hover:bg-transparent">
-                <TableHead className="w-[40px]">
-                  <Checkbox
-                    checked={selectedIds.length > 0 && selectedIds.length === filtered.length}
-                    onCheckedChange={toggleSelectAll}
-                    className="border-border data-[state=checked]:bg-blue-600"
-                  />
-                </TableHead>
-                <TableHead
-                  className="text-muted-foreground font-medium cursor-pointer hover:text-foreground transition-colors"
-                  onClick={() => requestSort("name")}
-                >
-                  <div className="flex items-center gap-1">
-                    Name
-                    {sortConfig?.key === "name" &&
-                      (sortConfig.direction === "asc" ? (
-                        <ChevronUp className="w-3 h-3" />
-                      ) : (
-                        <ChevronDown className="w-3 h-3" />
-                      ))}
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="text-muted-foreground font-medium cursor-pointer hover:text-foreground transition-colors"
-                  onClick={() => requestSort("status")}
-                >
-                  <div className="flex items-center gap-1">
-                    State
-                    {sortConfig?.key === "status" &&
-                      (sortConfig.direction === "asc" ? (
-                        <ChevronUp className="w-3 h-3" />
-                      ) : (
-                        <ChevronDown className="w-3 h-3" />
-                      ))}
-                  </div>
-                </TableHead>
-                <TableHead className="text-muted-foreground font-medium">Stack</TableHead>
-                <TableHead
-                  className="text-muted-foreground font-medium cursor-pointer hover:text-foreground transition-colors"
-                  onClick={() => requestSort("image")}
-                >
-                  <div className="flex items-center gap-1">
-                    Image
-                    {sortConfig?.key === "image" &&
-                      (sortConfig.direction === "asc" ? (
-                        <ChevronUp className="w-3 h-3" />
-                      ) : (
-                        <ChevronDown className="w-3 h-3" />
-                      ))}
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="text-muted-foreground font-medium cursor-pointer hover:text-foreground transition-colors"
-                  onClick={() => requestSort("created")}
-                >
-                  <div className="flex items-center gap-1">
-                    Created
-                    {sortConfig?.key === "created" &&
-                      (sortConfig.direction === "asc" ? (
-                        <ChevronUp className="w-3 h-3" />
-                      ) : (
-                        <ChevronDown className="w-3 h-3" />
-                      ))}
-                  </div>
-                </TableHead>
-                <TableHead
-                  className="text-muted-foreground font-medium cursor-pointer hover:text-foreground transition-colors"
-                  onClick={() => requestSort("ip_address")}
-                >
-                  <div className="flex items-center gap-1">
-                    IP Address
-                    {sortConfig?.key === "ip_address" &&
-                      (sortConfig.direction === "asc" ? (
-                        <ChevronUp className="w-3 h-3" />
-                      ) : (
-                        <ChevronDown className="w-3 h-3" />
-                      ))}
-                  </div>
-                </TableHead>
-                <TableHead className="text-muted-foreground font-medium">Host</TableHead>
-                <TableHead className="text-muted-foreground font-medium">Published Ports</TableHead>
-                <TableHead className="text-muted-foreground font-medium text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isInitialLoading ? (
-                Array.from({ length: 5 }).map((_, i) => (
-                  <TableRow key={i} className="border-border">
-                    <TableCell>
-                      <Skeleton className="h-4 w-4" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-20" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-8 w-16" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-40" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-32" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-4 w-32" />
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Skeleton className="h-8 w-8 ml-auto" />
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : filtered.length > 0 ? (
-                filtered.map((container) => (
-                  <ContainerRow
-                    key={container.id}
-                    container={container}
-                    isSelected={selectedIds.includes(container.id)}
-                    onSelect={() => toggleSelect(container.id)}
-                    handleAction={handleAction}
-                    handleDuplicate={handleDuplicate}
-                    openLogs={openLogs}
-                    openTerminal={openTerminal}
-                    openInspect={openInspect}
-                    openStatus={openStatus}
-                  />
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={10} className="h-32 text-center text-muted-foreground">
-                    No containers found.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+        <div className="rounded-xl border border-border bg-card/50 overflow-hidden flex flex-col">
+          <div className="shrink-0">
+            <table className="w-full caption-bottom text-sm">
+              <thead className="bg-card/80 [&_tr]:border-b">
+                <tr className="border-border hover:bg-transparent">
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[40px]">
+                    <Checkbox
+                      checked={selectedIds.length > 0 && selectedIds.length === filtered.length}
+                      onCheckedChange={toggleSelectAll}
+                      className="border-border data-[state=checked]:bg-blue-600"
+                    />
+                  </th>
+                  <th
+                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => requestSort("name")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Name
+                      {sortConfig?.key === "name" &&
+                        (sortConfig.direction === "asc" ? (
+                          <ChevronUp className="w-3 h-3" />
+                        ) : (
+                          <ChevronDown className="w-3 h-3" />
+                        ))}
+                    </div>
+                  </th>
+                  <th
+                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => requestSort("status")}
+                  >
+                    <div className="flex items-center gap-1">
+                      State
+                      {sortConfig?.key === "status" &&
+                        (sortConfig.direction === "asc" ? (
+                          <ChevronUp className="w-3 h-3" />
+                        ) : (
+                          <ChevronDown className="w-3 h-3" />
+                        ))}
+                    </div>
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Stack</th>
+                  <th
+                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => requestSort("image")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Image
+                      {sortConfig?.key === "image" &&
+                        (sortConfig.direction === "asc" ? (
+                          <ChevronUp className="w-3 h-3" />
+                        ) : (
+                          <ChevronDown className="w-3 h-3" />
+                        ))}
+                    </div>
+                  </th>
+                  <th
+                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => requestSort("created")}
+                  >
+                    <div className="flex items-center gap-1">
+                      Created
+                      {sortConfig?.key === "created" &&
+                        (sortConfig.direction === "asc" ? (
+                          <ChevronUp className="w-3 h-3" />
+                        ) : (
+                          <ChevronDown className="w-3 h-3" />
+                        ))}
+                    </div>
+                  </th>
+                  <th
+                    className="h-12 px-4 text-left align-middle font-medium text-muted-foreground cursor-pointer hover:text-foreground transition-colors"
+                    onClick={() => requestSort("ip_address")}
+                  >
+                    <div className="flex items-center gap-1">
+                      IP Address
+                      {sortConfig?.key === "ip_address" &&
+                        (sortConfig.direction === "asc" ? (
+                          <ChevronUp className="w-3 h-3" />
+                        ) : (
+                          <ChevronDown className="w-3 h-3" />
+                        ))}
+                    </div>
+                  </th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Host</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground">Published Ports</th>
+                  <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground text-right">Actions</th>
+                </tr>
+              </thead>
+            </table>
+          </div>
+          <div className="flex-1 min-h-0">
+            {isInitialLoading ? (
+              <table className="w-full caption-bottom text-sm">
+                <tbody>
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i} className="border-b transition-colors hover:bg-muted/50 border-border">
+                      <td className="p-4 align-middle"><Skeleton className="h-4 w-4" /></td>
+                      <td className="p-4 align-middle"><Skeleton className="h-4 w-20" /></td>
+                      <td className="p-4 align-middle"><Skeleton className="h-8 w-16" /></td>
+                      <td className="p-4 align-middle"><Skeleton className="h-4 w-24" /></td>
+                      <td className="p-4 align-middle"><Skeleton className="h-4 w-40" /></td>
+                      <td className="p-4 align-middle"><Skeleton className="h-4 w-24" /></td>
+                      <td className="p-4 align-middle"><Skeleton className="h-4 w-32" /></td>
+                      <td className="p-4 align-middle"><Skeleton className="h-4 w-24" /></td>
+                      <td className="p-4 align-middle"><Skeleton className="h-4 w-32" /></td>
+                      <td className="p-4 align-middle text-right"><Skeleton className="h-8 w-8 ml-auto" /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : filtered.length > 0 ? (
+              <div style={{ height: 600 }}>
+                <List
+                  rowCount={filtered.length}
+                  rowHeight={53}
+                  overscanCount={5}
+                  rowProps={{} as any}
+                  rowComponent={({ index, style }: { index: number; style: CSSProperties }) => {
+                  const container = filtered[index];
+                  return (
+                    <div style={style}>
+                      <table className="w-full caption-bottom text-sm" style={{ tableLayout: "fixed" }}>
+                        <colgroup>
+                          <col style={{ width: 40 }} />
+                          <col />
+                          <col style={{ width: 100 }} />
+                          <col style={{ width: 100 }} />
+                          <col />
+                          <col style={{ width: 160 }} />
+                          <col style={{ width: 140 }} />
+                          <col style={{ width: 100 }} />
+                          <col />
+                          <col style={{ width: 60 }} />
+                        </colgroup>
+                        <tbody>
+                          <ContainerRow
+                            container={container}
+                            isSelected={selectedIds.includes(container.id)}
+                            onSelect={() => toggleSelect(container.id)}
+                            handleAction={handleAction}
+                            handleDuplicate={handleDuplicate}
+                            openLogs={openLogs}
+                            openTerminal={openTerminal}
+                            openInspect={openInspect}
+                            openStatus={openStatus}
+                          />
+                        </tbody>
+                      </table>
+                    </div>
+                  );
+                }}
+              />
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-32 text-muted-foreground">
+                No containers found.
+              </div>
+            )}
+          </div>
         </div>
 
         <Sheet
@@ -1161,6 +1194,23 @@ const ContainerRow = ({
               <RefreshCw className="mr-2 h-4 w-4 text-blue-400" />
               <span>Restart</span>
             </DropdownMenuItem>
+            {container.status === "running" ? (
+              <DropdownMenuItem
+                className="hover:bg-muted focus:bg-muted cursor-pointer"
+                onClick={() => handleAction(pauseContainer, container.id, container.name)}
+              >
+                <Pause className="mr-2 h-4 w-4 text-indigo-500" />
+                <span>Pause</span>
+              </DropdownMenuItem>
+            ) : container.status === "paused" ? (
+              <DropdownMenuItem
+                className="hover:bg-muted focus:bg-muted cursor-pointer"
+                onClick={() => handleAction(unpauseContainer, container.id, container.name)}
+              >
+                <Play className="mr-2 h-4 w-4 text-emerald-500" />
+                <span>Unpause</span>
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuSeparator className="bg-border" />
             <DropdownMenuItem
               className="hover:bg-muted focus:bg-muted cursor-pointer"
