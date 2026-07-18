@@ -128,6 +128,8 @@ const Containers = () => {
   const logScrollRef = useRef<HTMLDivElement>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
+  const listContainerRef = useRef<HTMLDivElement>(null);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refreshContainers();
@@ -419,7 +421,7 @@ const Containers = () => {
 
   return (
     <div className="h-full p-8">
-      <div className="space-y-6">
+      <div className="h-full flex flex-col gap-6">
         <div className="flex justify-between items-center">
           <div>
             <h2 className="text-3xl font-bold text-foreground tracking-tight">Containers</h2>
@@ -557,9 +559,21 @@ const Containers = () => {
           </div>
         </div>
 
-        <div className="rounded-xl border border-border bg-card/50 overflow-hidden flex flex-col">
-          <div className="shrink-0">
-            <table className="w-full caption-bottom text-sm">
+        <div className="rounded-xl border border-border bg-card/50 overflow-hidden flex flex-col flex-1 min-h-0">
+          <div className="shrink-0" style={{ scrollbarGutter: "stable", overflowY: "scroll", scrollbarColor: "transparent transparent" }}>
+            <table className="w-full caption-bottom text-sm" style={{ tableLayout: "fixed" }}>
+              <colgroup>
+                <col style={{ width: 40 }} />
+                <col />
+                <col style={{ width: 100 }} />
+                <col style={{ width: 100 }} />
+                <col />
+                <col style={{ width: 160 }} />
+                <col style={{ width: 140 }} />
+                <col style={{ width: 100 }} />
+                <col />
+                <col style={{ width: 60 }} />
+              </colgroup>
               <thead className="bg-card/80 [&_tr]:border-b">
                 <tr className="border-border hover:bg-transparent">
                   <th className="h-12 px-4 text-left align-middle font-medium text-muted-foreground w-[40px]">
@@ -647,9 +661,21 @@ const Containers = () => {
               </thead>
             </table>
           </div>
-          <div className="flex-1 min-h-0">
+          <div ref={listContainerRef} className="flex-1 min-h-0 relative">
             {isInitialLoading ? (
-              <table className="w-full caption-bottom text-sm">
+              <table className="w-full caption-bottom text-sm" style={{ tableLayout: "fixed" }}>
+                <colgroup>
+                  <col style={{ width: 40 }} />
+                  <col />
+                  <col style={{ width: 100 }} />
+                  <col style={{ width: 100 }} />
+                  <col />
+                  <col style={{ width: 160 }} />
+                  <col style={{ width: 140 }} />
+                  <col style={{ width: 100 }} />
+                  <col />
+                  <col style={{ width: 60 }} />
+                </colgroup>
                 <tbody>
                   {Array.from({ length: 5 }).map((_, i) => (
                     <tr key={i} className="border-b transition-colors hover:bg-muted/50 border-border">
@@ -668,13 +694,13 @@ const Containers = () => {
                 </tbody>
               </table>
             ) : filtered.length > 0 ? (
-              <div style={{ height: 600 }}>
-                <List
-                  rowCount={filtered.length}
-                  rowHeight={53}
-                  overscanCount={5}
-                  rowProps={{} as any}
-                  rowComponent={({ index, style }: { index: number; style: CSSProperties }) => {
+              <List
+                rowCount={filtered.length}
+                rowHeight={53}
+                overscanCount={5}
+                rowProps={{} as any}
+                style={{ scrollbarGutter: "stable" }}
+                rowComponent={({ index, style }: { index: number; style: CSSProperties }) => {
                   const container = filtered[index];
                   return (
                     <div style={style}>
@@ -709,7 +735,6 @@ const Containers = () => {
                   );
                 }}
               />
-              </div>
             ) : (
               <div className="flex items-center justify-center h-32 text-muted-foreground">
                 No containers found.
