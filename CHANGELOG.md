@@ -1,3 +1,10 @@
+# [1.14.0-beta.4](https://github.com/pedrofariasx/dockernativemanager/compare/v1.14.0-beta.3...v1.14.0-beta.4) (2026-07-18)
+
+
+### Bug Fixes
+
+* corrigir layout da tabela de containers com virtualização e colunas alinhadas ([d91c28c](https://github.com/pedrofariasx/dockernativemanager/commit/d91c28c52ef84f065060a8f4aa0dd62b54872fa9))
+
 # [1.14.0-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.14.0-beta.2...v1.14.0-beta.3) (2026-07-18)
 
 
