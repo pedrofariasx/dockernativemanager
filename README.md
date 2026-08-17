@@ -4,6 +4,7 @@
 [![React](https://img.shields.io/badge/React-19.2-blue?logo=react)](https://react.dev)
 [![Rust](https://img.shields.io/badge/Rust-1.80%2B-orange?logo=rust)](https://www.rust-lang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
+<a href="https://www.buymeacoffee.com/pedrofariasx" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" style="height: 20px !important;width: 78px !important;" ></a>
 
 A modern, native, and blazing-fast desktop application to manage your Docker environments, built with **Tauri v2**, **React**, **TypeScript**, and **Rust**.
 
