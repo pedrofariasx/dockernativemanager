@@ -58,17 +58,17 @@
     "clsx": "^2.1.1",
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
-    "dayjs": "^1.11.21",
+    "dayjs": "^1.11.23",
     "embla-carousel-react": "^8.3.0",
-    "input-otp": "^1.2.4",
-    "lucide-react": "^1.30.0",
+    "input-otp": "^1.5.0",
+    "lucide-react": "^1.33.0",
     "next-themes": "^0.4.6",
     "react": "^19.2.8",
     "react-day-picker": "^9.13.0",
     "react-dom": "^19.2.8",
-    "react-hook-form": "^7.84.0",
+    "react-hook-form": "^7.85.0",
     "react-markdown": "^10.1.0",
-    "react-resizable-panels": "^4.12.2",
+    "react-resizable-panels": "^4.12.3",
     "react-router-dom": "^6.26.2",
     "recharts": "^3.10.1",
     "sonner": "^1.5.0",
@@ -78,9 +78,9 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@commitlint/cli": "^21.2.1",
-    "@commitlint/config-conventional": "^21.2.0",
-    "oxlint": "^1.77.0",
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
+    "oxlint": "^1.79.0",
     "@semantic-release/changelog": "^7.0.0",
     "@semantic-release/commit-analyzer": "^13.0.1",
     "@semantic-release/exec": "^7.1.0",
@@ -90,7 +90,7 @@
     "@tauri-apps/cli": "^2.11.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@testing-library/user-event": "^14.6.3",
+    "@testing-library/user-event": "^14.6.5",
     "@types/node": "^22.19.15",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.4",
@@ -105,7 +105,7 @@
     "tailwindcss": "^3.4.11",
     "typescript": "^7.0.2",
     "vite": "^6.3.4",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "packageManager": "pnpm@11.13.1+sha512.b2fc7683b8a6525414e7d13e1ba28caaddde96bf66ec540bfaeb7e702b81f3e0be4d1f295edf7f9fe0396740a8dce4509c582ddf79891f4543fea32d37645f25"
 }
