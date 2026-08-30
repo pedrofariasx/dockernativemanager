@@ -1,3 +1,10 @@
+## [1.15.1-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.1...v1.15.1-beta.2) (2026-08-30)
+
+
+### Bug Fixes
+
+* **frontend:** resolve lint errors blocking CI frontend job ([18d3302](https://github.com/pedrofariasx/dockernativemanager/commit/18d3302d0bd4cee2e2d5fd6b239410782c99f4fa))
+
 ## [1.15.1-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0...v1.15.1-beta.1) (2026-07-27)
 
 
