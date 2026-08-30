@@ -63,7 +63,11 @@ export const VolumeFileBrowser = ({ volumeName }: VolumeFileBrowserProps) => {
   );
 
   useEffect(() => {
-    fetchFiles("/");
+    const timeoutId = setTimeout(() => {
+      void fetchFiles("/");
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
   }, [fetchFiles]);
 
   const handleNavigate = (path: string) => {
