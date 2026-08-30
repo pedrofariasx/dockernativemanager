@@ -8,9 +8,10 @@
  * Modified By: Pedro Farias
  */
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useRef } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Folder, File, ArrowLeft, Trash2, Loader2, Upload } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
@@ -37,49 +38,43 @@ interface VolumeFileBrowserProps {
 }
 
 export const VolumeFileBrowser = ({ volumeName }: VolumeFileBrowserProps) => {
-  const [files, setFiles] = useState<FileEntry[]>([]);
   const [currentPath, setCurrentPath] = useState("/");
-  const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const fetchFiles = useCallback(
-    async (path: string) => {
-      setIsLoading(true);
+  const {
+    data: files = [],
+    isFetching: isLoading,
+    refetch,
+  } = useQuery({
+    queryKey: ["volume-files", volumeName, currentPath],
+    queryFn: async () => {
       try {
-        const data: FileEntry[] = await invoke("list_volume_files", {
+        return await invoke<FileEntry[]>("list_volume_files", {
           volumeName,
-          subPath: path,
+          subPath: currentPath,
         });
-        setFiles(data);
-        setCurrentPath(path);
       } catch (err) {
         showError(`Error listing files: ${err}`);
-      } finally {
-        setIsLoading(false);
+        return [];
       }
     },
-    [volumeName],
-  );
-
-  useEffect(() => {
-    fetchFiles("/");
-  }, [fetchFiles]);
+  });
 
   const handleNavigate = (path: string) => {
-    fetchFiles(path);
+    setCurrentPath(path);
   };
 
   const handleGoBack = () => {
     const parentPath = currentPath.split("/").filter(Boolean).slice(0, -1).join("/") || "/";
-    fetchFiles(parentPath === "" ? "/" : `/${parentPath}`);
+    setCurrentPath(parentPath === "" ? "/" : `/${parentPath}`);
   };
 
   const handleDelete = async (path: string) => {
     try {
       await invoke("delete_volume_file", { volumeName, filePath: path });
       showSuccess("File deleted");
-      fetchFiles(currentPath);
+      refetch();
     } catch (err) {
       showError(`Error deleting: ${err}`);
     }
@@ -97,7 +92,7 @@ export const VolumeFileBrowser = ({ volumeName }: VolumeFileBrowserProps) => {
 
       await invoke("upload_volume_file", { volumeName, targetPath, fileContent: bytes });
       showSuccess("File uploaded");
-      fetchFiles(currentPath);
+      refetch();
     } catch (err) {
       showError(`Error uploading: ${err}`);
     } finally {
