@@ -27,6 +27,11 @@ updates:
       interval: "weekly"
       day: "monday"
     open-pull-requests-limit: 3
+    ignore:
+      - dependency-name: "bollard"
+        update-types:
+          - "version-update:semver-minor"
+          - "version-update:semver-major"
     groups:
       cargo-minor-patch:
         update-types:

@@ -696,7 +696,7 @@ dependencies = [
 
 [[package]]
 name = "docker-native-manager"
-version = "1.15.0-beta.7"
+version = "1.15.2"
 dependencies = [
  "bollard",
  "chrono",
