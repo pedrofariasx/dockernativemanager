@@ -1,3 +1,10 @@
+## [1.15.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1...v1.15.2) (2026-08-30)
+
+
+### Bug Fixes
+
+* **frontend:** resolve oxlint CI violations ([90afdba](https://github.com/pedrofariasx/dockernativemanager/commit/90afdba58f98dfd59504e45852fdf0df2b508813))
+
 ## [1.15.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0...v1.15.1) (2026-07-27)
 
 
