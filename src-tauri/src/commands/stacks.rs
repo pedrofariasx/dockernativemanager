@@ -10,17 +10,18 @@
 
 use crate::models::StackInfo;
 use crate::utils::get_docker;
-use bollard::container::ListContainersOptions;
+use bollard::models::ContainerSummaryStateEnum;
+use bollard::query_parameters::ListContainersOptions;
 use std::collections::HashMap;
 use tauri::AppHandle;
 
 #[tauri::command]
 pub async fn get_stacks() -> Result<Vec<StackInfo>, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
 
     // 1. Get all containers for Compose stacks
     let containers = docker
-        .list_containers(Some(ListContainersOptions::<String> {
+        .list_containers(Some(ListContainersOptions {
             all: true,
             ..Default::default()
         }))
@@ -45,7 +46,7 @@ pub async fn get_stacks() -> Result<Vec<StackInfo>, String> {
         if let Some(labels) = c.labels {
             if let Some(name) = labels.get("com.docker.compose.project") {
                 let created = c.created.unwrap_or(0);
-                let state = c.state.as_deref().unwrap_or("");
+                let state = c.state;
                 let status = c.status.as_deref().unwrap_or("");
 
                 let stats = stacks.entry(name.clone()).or_insert_with(|| StackStats {
@@ -61,8 +62,8 @@ pub async fn get_stacks() -> Result<Vec<StackInfo>, String> {
 
                 stats.total += 1;
                 match state {
-                    "running" => stats.running += 1,
-                    "exited" => {
+                    Some(ContainerSummaryStateEnum::RUNNING) => stats.running += 1,
+                    Some(ContainerSummaryStateEnum::EXITED) => {
                         stats.exited += 1;
                         if status.contains("Exited (0)") {
                             stats.completed += 1;
