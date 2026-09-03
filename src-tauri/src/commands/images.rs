@@ -10,7 +10,7 @@
 
 use crate::models::ImageInfo;
 use crate::utils::get_docker;
-use bollard::image::{
+use bollard::query_parameters::{
     CreateImageOptions, ListImagesOptions, PruneImagesOptions, RemoveImageOptions,
 };
 use chrono::{Local, TimeZone};
@@ -19,9 +19,9 @@ use tauri::{AppHandle, Emitter};
 
 #[tauri::command]
 pub async fn get_images() -> Result<Vec<ImageInfo>, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let images = docker
-        .list_images(Some(ListImagesOptions::<String> {
+        .list_images(Some(ListImagesOptions {
             all: true,
             ..Default::default()
         }))
@@ -79,7 +79,7 @@ pub async fn get_images() -> Result<Vec<ImageInfo>, String> {
 
 #[tauri::command]
 pub async fn delete_image(id: String) -> Result<(), String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     docker
         .remove_image(&id, None::<RemoveImageOptions>, None)
         .await
@@ -89,7 +89,7 @@ pub async fn delete_image(id: String) -> Result<(), String> {
 
 #[tauri::command]
 pub async fn pull_image(app_handle: AppHandle, image: String) -> Result<(), String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
 
     let full_image = if image.contains(':') {
         image
@@ -99,7 +99,7 @@ pub async fn pull_image(app_handle: AppHandle, image: String) -> Result<(), Stri
 
     let mut stream = docker.create_image(
         Some(CreateImageOptions {
-            from_image: full_image.clone(),
+            from_image: Some(full_image.clone()),
             ..Default::default()
         }),
         None,
@@ -109,8 +109,12 @@ pub async fn pull_image(app_handle: AppHandle, image: String) -> Result<(), Stri
     while let Some(item) = stream.next().await {
         match item {
             Ok(progress) => {
-                if let Some(error) = progress.error {
-                    return Err(format!("Docker pull error: {}", error));
+                if let Some(message) = progress
+                    .error_detail
+                    .as_ref()
+                    .and_then(|e| e.message.clone())
+                {
+                    return Err(format!("Docker pull error: {}", message));
                 }
                 let _ = app_handle.emit(&format!("pull-progress-{}", full_image), progress);
             }
@@ -123,9 +127,9 @@ pub async fn pull_image(app_handle: AppHandle, image: String) -> Result<(), Stri
 
 #[tauri::command]
 pub async fn prune_images() -> Result<String, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let result = docker
-        .prune_images(None::<PruneImagesOptions<String>>)
+        .prune_images(None::<PruneImagesOptions>)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -141,7 +145,7 @@ pub async fn prune_images() -> Result<String, String> {
 
 #[tauri::command]
 pub async fn inspect_image(id: String) -> Result<String, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let inspect = docker.inspect_image(&id).await.map_err(|e| e.to_string())?;
     serde_json::to_string_pretty(&inspect).map_err(|e| e.to_string())
 }
