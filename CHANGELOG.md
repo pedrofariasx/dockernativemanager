@@ -1,3 +1,10 @@
+## [1.15.1-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.2...v1.15.1-beta.3) (2026-09-10)
+
+
+### Bug Fixes
+
+* restore splash skeleton stylesheet ([e79e4ac](https://github.com/pedrofariasx/dockernativemanager/commit/e79e4ac43f2844e4e7ec769aa5bed34615c6bfad))
+
 ## [1.15.1-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.1...v1.15.1-beta.2) (2026-08-30)
 
 
