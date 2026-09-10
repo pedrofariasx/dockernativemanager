@@ -1,3 +1,10 @@
+# [1.16.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.3...v1.16.0-beta.1) (2026-09-10)
+
+
+### Features
+
+* atualiza bollard para ultima versão 0.21.x ([f194177](https://github.com/pedrofariasx/dockernativemanager/commit/f19417782fb96320505aed40bfeebd272ba07667))
+
 ## [1.15.1-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.2...v1.15.1-beta.3) (2026-09-10)
 
 
