@@ -8,17 +8,16 @@
  *
  */
 
-use crate::models::{ContainerStats, HostStats};
-use crate::utils::{get_docker, IS_STOPPED_INTENTIONALLY};
-use bollard::container::{ListContainersOptions, MemoryStatsStats, StatsOptions};
-use bollard::system::EventsOptions;
+use crate::models::HostStats;
+use crate::utils::{get_docker, map_container_stats, IS_STOPPED_INTENTIONALLY};
+use bollard::query_parameters::{EventsOptions, ListContainersOptions, StatsOptions};
 use futures_util::stream::StreamExt;
 use std::sync::atomic::Ordering;
 use tauri::{AppHandle, Emitter};
 
 pub async fn listen_to_docker_events(app_handle: AppHandle) {
     // Immediate check on startup
-    match get_docker() {
+    match get_docker().await {
         Ok(docker) => {
             if docker.ping().await.is_ok() {
                 let _ = app_handle.emit("docker-connection-status", true);
@@ -38,7 +37,7 @@ pub async fn listen_to_docker_events(app_handle: AppHandle) {
             continue;
         }
 
-        match get_docker() {
+        match get_docker().await {
             Ok(docker) => {
                 if docker.ping().await.is_err() {
                     let _ = app_handle.emit("docker-connection-status", false);
@@ -47,7 +46,7 @@ pub async fn listen_to_docker_events(app_handle: AppHandle) {
                 }
 
                 let _ = app_handle.emit("docker-connection-status", true);
-                let mut events = docker.events(None::<EventsOptions<String>>);
+                let mut events = docker.events(None::<EventsOptions>);
 
                 loop {
                     tokio::select! {
@@ -86,13 +85,13 @@ pub async fn emit_container_stats(app_handle: AppHandle) {
             continue;
         }
 
-        let docker = match get_docker() {
+        let docker = match get_docker().await {
             Ok(d) => d,
             Err(_) => continue,
         };
 
         let containers = match docker
-            .list_containers(Some(ListContainersOptions::<String> {
+            .list_containers(Some(ListContainersOptions {
                 all: false, // only running
                 ..Default::default()
             }))
@@ -114,63 +113,7 @@ pub async fn emit_container_stats(app_handle: AppHandle) {
                 );
 
                 if let Some(Ok(stats)) = stats_stream.next().await {
-                    let cpu_delta = stats.cpu_stats.cpu_usage.total_usage as f64
-                        - stats.precpu_stats.cpu_usage.total_usage as f64;
-                    let system_delta = stats.cpu_stats.system_cpu_usage.unwrap_or(0) as f64
-                        - stats.precpu_stats.system_cpu_usage.unwrap_or(0) as f64;
-                    let mut cpu_percent = 0.0;
-
-                    if system_delta > 0.0 && cpu_delta > 0.0 {
-                        let num_cpus = stats.cpu_stats.online_cpus.unwrap_or(1) as f64;
-                        cpu_percent = (cpu_delta / system_delta) * num_cpus * 100.0;
-                    }
-
-                    let memory_usage = stats.memory_stats.usage.unwrap_or(0);
-                    let memory_limit = stats.memory_stats.limit.unwrap_or(0);
-
-                    let mut actual_memory = memory_usage;
-                    if let Some(stats_detail) = stats.memory_stats.stats {
-                        match stats_detail {
-                            MemoryStatsStats::V1(v1) => {
-                                actual_memory = memory_usage.saturating_sub(v1.cache);
-                            }
-                            MemoryStatsStats::V2(v2) => {
-                                actual_memory = memory_usage.saturating_sub(v2.inactive_file);
-                            }
-                        }
-                    }
-
-                    let mut net_rx = 0;
-                    let mut net_tx = 0;
-                    if let Some(networks) = stats.networks {
-                        for net in networks.values() {
-                            net_rx += net.rx_bytes;
-                            net_tx += net.tx_bytes;
-                        }
-                    }
-
-                    let mut disk_read = 0;
-                    let mut disk_write = 0;
-                    if let Some(ios) = stats.blkio_stats.io_service_bytes_recursive {
-                        for io in ios {
-                            match io.op.to_lowercase().as_str() {
-                                "read" => disk_read += io.value,
-                                "write" => disk_write += io.value,
-                                _ => {}
-                            }
-                        }
-                    }
-
-                    let payload = ContainerStats {
-                        cpu_percent,
-                        memory_usage: actual_memory,
-                        memory_limit,
-                        disk_read,
-                        disk_write,
-                        net_rx,
-                        net_tx,
-                    };
-
+                    let payload = map_container_stats(&stats);
                     let _ = app_handle.emit(&format!("container-stats-{}", id_clone), payload);
                 }
             }
@@ -206,7 +149,7 @@ pub async fn emit_host_stats(app_handle: AppHandle) {
 
         if is_remote {
             // For remote contexts, get stats via Docker API (through the SSH tunnel)
-            match get_docker() {
+            match get_docker().await {
                 Ok(docker) => {
                     match docker.info().await {
                         Ok(info) => {

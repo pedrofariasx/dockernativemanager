@@ -8,7 +8,9 @@
  *
  */
 
-use bollard::Docker;
+use crate::models::ContainerStats;
+use bollard::models::{ContainerCpuStats, ContainerStatsResponse};
+use bollard::{ClientVersion, Docker};
 use std::collections::HashMap;
 use std::io::Read;
 use std::process::Child;
@@ -20,9 +22,28 @@ pub static IS_STOPPED_INTENTIONALLY: AtomicBool = AtomicBool::new(false);
 
 pub type TerminalSenders = Mutex<HashMap<String, mpsc::Sender<String>>>;
 
+const CONNECT_TIMEOUT: u64 = 120;
+
+// Endpoint to fall back on when the active context cannot be read. Mirrors
+// bollard's own platform default, which it does not expose at the crate root.
+#[cfg(unix)]
+const LOCAL_DOCKER_HOST: &str = "unix:///var/run/docker.sock";
+#[cfg(windows)]
+const LOCAL_DOCKER_HOST: &str = "npipe:////./pipe/docker_engine";
+
 // Global SSH tunnel process handle
 lazy_static::lazy_static! {
     static ref SSH_TUNNEL: Mutex<Option<SshTunnel>> = Mutex::new(None);
+}
+
+// API version the daemon behind each endpoint accepts, learned on first use.
+//
+// bollard's `API_DEFAULT_VERSION` tracks the newest Docker release, and a
+// daemon rejects any request whose path carries a version above its own
+// maximum, so the version has to be negotiated rather than assumed.
+lazy_static::lazy_static! {
+    static ref ENDPOINT_API_VERSIONS: Mutex<HashMap<String, ClientVersion>> =
+        Mutex::new(HashMap::new());
 }
 
 struct SshTunnel {
@@ -184,12 +205,8 @@ fn start_ssh_tunnel_raw(ssh_url: &str) -> Result<(Child, String), String> {
     Ok((child, socket_path))
 }
 
-pub fn get_docker() -> Result<Docker, String> {
-    if IS_STOPPED_INTENTIONALLY.load(Ordering::SeqCst) {
-        return Err("Docker is intentionally stopped".into());
-    }
-
-    // Get the current context's endpoint
+/// Endpoint of the active Docker context, or an empty string when there is none.
+fn current_endpoint() -> Result<String, String> {
     let output = std::process::Command::new("docker")
         .args([
             "context",
@@ -200,17 +217,24 @@ pub fn get_docker() -> Result<Docker, String> {
         .output()
         .map_err(|e| format!("Failed to get docker context: {}", e))?;
 
-    if !output.status.success() {
-        stop_ssh_tunnel();
-        return Docker::connect_with_local_defaults().map_err(|e| e.to_string());
+    let host = if output.status.success() {
+        String::from_utf8_lossy(&output.stdout).trim().to_string()
+    } else {
+        String::new()
+    };
+
+    if host.is_empty() {
+        // No usable context: honour DOCKER_HOST the way bollard's own defaults
+        // do, and let the caller fall back to the platform socket.
+        return Ok(std::env::var("DOCKER_HOST").unwrap_or_default());
     }
 
-    let host = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    Ok(host)
+}
 
-    if host.is_empty() || host.starts_with("unix://") || host.starts_with("/") {
-        stop_ssh_tunnel();
-        Docker::connect_with_local_defaults().map_err(|e| e.to_string())
-    } else if host.starts_with("ssh://") {
+/// Open a connection to `host`, pinning the client to `version`.
+fn connect_endpoint(host: &str, version: &ClientVersion) -> Result<Docker, String> {
+    if host.starts_with("ssh://") {
         let mut tunnel_lock = SSH_TUNNEL.lock().unwrap();
 
         // Check if existing tunnel is valid
@@ -223,12 +247,8 @@ pub fn get_docker() -> Result<Docker, String> {
                 .unwrap_or(false);
 
             if socket_exists && process_alive {
-                return Docker::connect_with_socket(
-                    &tunnel.socket_path,
-                    120,
-                    bollard::API_DEFAULT_VERSION,
-                )
-                .map_err(|e| e.to_string());
+                return Docker::connect_with_socket(&tunnel.socket_path, CONNECT_TIMEOUT, version)
+                    .map_err(|e| e.to_string());
             }
         }
 
@@ -240,20 +260,145 @@ pub fn get_docker() -> Result<Docker, String> {
             std::mem::forget(t);
         }
 
-        let (child, socket_path) = start_ssh_tunnel_raw(&host)?;
+        let (child, socket_path) = start_ssh_tunnel_raw(host)?;
         let socket_to_return = socket_path.clone();
 
         *tunnel_lock = Some(SshTunnel { child, socket_path });
 
-        Docker::connect_with_socket(&socket_to_return, 120, bollard::API_DEFAULT_VERSION)
+        Docker::connect_with_socket(&socket_to_return, CONNECT_TIMEOUT, version)
             .map_err(|e| e.to_string())
     } else if host.starts_with("tcp://") {
         stop_ssh_tunnel();
         let addr = host.trim_start_matches("tcp://");
-        Docker::connect_with_http(addr, 120, bollard::API_DEFAULT_VERSION)
-            .map_err(|e| e.to_string())
+        Docker::connect_with_http(addr, CONNECT_TIMEOUT, version).map_err(|e| e.to_string())
     } else {
+        // Unix socket, Windows named pipe, or a context we could not read.
         stop_ssh_tunnel();
-        Docker::connect_with_local_defaults().map_err(|e| e.to_string())
+        let addr = if host.is_empty() {
+            LOCAL_DOCKER_HOST
+        } else {
+            host
+        };
+        Docker::connect_with_local(addr, CONNECT_TIMEOUT, version).map_err(|e| e.to_string())
+    }
+}
+
+pub async fn get_docker() -> Result<Docker, String> {
+    if IS_STOPPED_INTENTIONALLY.load(Ordering::SeqCst) {
+        return Err("Docker is intentionally stopped".into());
+    }
+
+    let host = current_endpoint()?;
+    let known = ENDPOINT_API_VERSIONS.lock().unwrap().get(&host).copied();
+
+    let docker = connect_endpoint(
+        &host,
+        known.as_ref().unwrap_or(bollard::API_DEFAULT_VERSION),
+    )?;
+    if known.is_some() {
+        return Ok(docker);
+    }
+
+    // First connection to this endpoint: ask the daemon which API version it
+    // speaks. `negotiate_version` requests an unversioned `/version`, so it
+    // works even when our default is above the daemon's maximum.
+    let docker = docker
+        .negotiate_version()
+        .await
+        .map_err(|e| format!("Failed to negotiate the Docker API version: {}", e))?;
+
+    ENDPOINT_API_VERSIONS
+        .lock()
+        .unwrap()
+        .insert(host, docker.client_version());
+
+    Ok(docker)
+}
+
+/// Flatten a raw Docker stats sample into the shape the UI consumes.
+///
+/// Every field of `ContainerStatsResponse` is optional: Windows containers,
+/// cgroups v1 and cgroups v2 each omit a different subset, so every metric
+/// falls back to zero instead of being unwrapped.
+pub fn map_container_stats(stats: &ContainerStatsResponse) -> ContainerStats {
+    let total_usage = |cpu: &Option<ContainerCpuStats>| {
+        cpu.as_ref()
+            .and_then(|c| c.cpu_usage.as_ref())
+            .and_then(|u| u.total_usage)
+            .unwrap_or(0) as f64
+    };
+    let system_usage = |cpu: &Option<ContainerCpuStats>| {
+        cpu.as_ref().and_then(|c| c.system_cpu_usage).unwrap_or(0) as f64
+    };
+
+    let cpu_delta = total_usage(&stats.cpu_stats) - total_usage(&stats.precpu_stats);
+    let system_delta = system_usage(&stats.cpu_stats) - system_usage(&stats.precpu_stats);
+
+    let mut cpu_percent = 0.0;
+    if system_delta > 0.0 && cpu_delta > 0.0 {
+        let num_cpus = stats
+            .cpu_stats
+            .as_ref()
+            .and_then(|c| c.online_cpus)
+            .unwrap_or(1) as f64;
+        cpu_percent = (cpu_delta / system_delta) * num_cpus * 100.0;
+    }
+
+    let memory_usage = stats
+        .memory_stats
+        .as_ref()
+        .and_then(|m| m.usage)
+        .unwrap_or(0);
+    let memory_limit = stats
+        .memory_stats
+        .as_ref()
+        .and_then(|m| m.limit)
+        .unwrap_or(0);
+
+    // Memory detail is a flat map now: cgroups v1 reports "cache",
+    // cgroups v2 reports "inactive_file".
+    let cache = stats
+        .memory_stats
+        .as_ref()
+        .and_then(|m| m.stats.as_ref())
+        .and_then(|s| s.get("cache").or_else(|| s.get("inactive_file")))
+        .copied()
+        .unwrap_or(0);
+    let actual_memory = memory_usage.saturating_sub(cache);
+
+    let mut net_rx = 0;
+    let mut net_tx = 0;
+    if let Some(networks) = stats.networks.as_ref() {
+        for net in networks.values() {
+            net_rx += net.rx_bytes.unwrap_or(0);
+            net_tx += net.tx_bytes.unwrap_or(0);
+        }
+    }
+
+    let mut disk_read = 0;
+    let mut disk_write = 0;
+    if let Some(ios) = stats
+        .blkio_stats
+        .as_ref()
+        .and_then(|b| b.io_service_bytes_recursive.as_ref())
+    {
+        for io in ios {
+            let value = io.value.unwrap_or(0);
+            match io.op.as_deref().unwrap_or("").to_lowercase().as_str() {
+                "read" => disk_read += value,
+                "write" => disk_write += value,
+                _ => {}
+            }
+        }
+    }
+
+    ContainerStats {
+        cpu_percent,
+        memory_usage: actual_memory,
+        memory_limit,
+        disk_read,
+        disk_write,
+        net_rx,
+        net_tx,
     }
 }

@@ -10,17 +10,15 @@
 
 use crate::models::NetworkInfo;
 use crate::utils::get_docker;
-use bollard::network::{
-    ConnectNetworkOptions, CreateNetworkOptions, DisconnectNetworkOptions, InspectNetworkOptions,
-    ListNetworksOptions, PruneNetworksOptions,
-};
+use bollard::models::{NetworkConnectRequest, NetworkCreateRequest, NetworkDisconnectRequest};
+use bollard::query_parameters::{InspectNetworkOptions, ListNetworksOptions, PruneNetworksOptions};
 use std::collections::HashMap;
 
 #[tauri::command]
 pub async fn get_networks() -> Result<Vec<NetworkInfo>, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let networks = docker
-        .list_networks(None::<ListNetworksOptions<String>>)
+        .list_networks(None::<ListNetworksOptions>)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -37,7 +35,7 @@ pub async fn get_networks() -> Result<Vec<NetworkInfo>, String> {
 
 #[tauri::command]
 pub async fn delete_network(id: String) -> Result<(), String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     docker.remove_network(&id).await.map_err(|e| e.to_string())
 }
 
@@ -49,13 +47,13 @@ pub async fn create_network(
     attachable: bool,
     labels: HashMap<String, String>,
 ) -> Result<(), String> {
-    let docker = get_docker()?;
-    let options = CreateNetworkOptions {
+    let docker = get_docker().await?;
+    let options = NetworkCreateRequest {
         name,
-        driver,
-        internal,
-        attachable,
-        labels,
+        driver: Some(driver),
+        internal: Some(internal),
+        attachable: Some(attachable),
+        labels: Some(labels),
         ..Default::default()
     };
     docker
@@ -70,8 +68,8 @@ pub async fn connect_container_to_network(
     network_id: String,
     container_id: String,
 ) -> Result<(), String> {
-    let docker = get_docker()?;
-    let options = ConnectNetworkOptions {
+    let docker = get_docker().await?;
+    let options = NetworkConnectRequest {
         container: container_id,
         ..Default::default()
     };
@@ -87,10 +85,10 @@ pub async fn disconnect_container_from_network(
     container_id: String,
     force: bool,
 ) -> Result<(), String> {
-    let docker = get_docker()?;
-    let options = DisconnectNetworkOptions {
+    let docker = get_docker().await?;
+    let options = NetworkDisconnectRequest {
         container: container_id,
-        force,
+        force: Some(force),
     };
     docker
         .disconnect_network(&network_id, options)
@@ -100,9 +98,9 @@ pub async fn disconnect_container_from_network(
 
 #[tauri::command]
 pub async fn prune_networks() -> Result<String, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let result = docker
-        .prune_networks(None::<PruneNetworksOptions<String>>)
+        .prune_networks(None::<PruneNetworksOptions>)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -112,9 +110,9 @@ pub async fn prune_networks() -> Result<String, String> {
 
 #[tauri::command]
 pub async fn inspect_network(id: String) -> Result<String, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let inspect = docker
-        .inspect_network(&id, None::<InspectNetworkOptions<String>>)
+        .inspect_network(&id, None::<InspectNetworkOptions>)
         .await
         .map_err(|e| e.to_string())?;
     serde_json::to_string_pretty(&inspect).map_err(|e| e.to_string())

@@ -10,8 +10,11 @@
 
 use crate::models::VolumeInfo;
 use crate::utils::get_docker;
-use bollard::container::ListContainersOptions;
-use bollard::volume::{CreateVolumeOptions, ListVolumesOptions, RemoveVolumeOptions};
+use bollard::models::VolumeCreateRequest;
+use bollard::query_parameters::{
+    DataUsageOptions, ListContainersOptions, ListVolumesOptions, PruneVolumesOptions,
+    RemoveVolumeOptions,
+};
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
@@ -235,25 +238,30 @@ pub async fn delete_volume_file(volume_name: String, file_path: String) -> Resul
 
 #[tauri::command]
 pub async fn get_volumes() -> Result<Vec<VolumeInfo>, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
 
     let (volumes, df) = tokio::join!(
-        docker.list_volumes(None::<ListVolumesOptions<String>>),
-        docker.df(),
+        docker.list_volumes(None::<ListVolumesOptions>),
+        docker.df(None::<DataUsageOptions>),
     );
 
     let volumes = volumes.map_err(|e| e.to_string())?;
     let df = df.map_err(|e| e.to_string())?;
 
-    // Map of volume name -> usage data (size / ref_count), sourced from `df` which
-    // actually reports per-volume disk usage. `list_volumes` does not return it.
+    // As of newer bollard/Docker API versions, `df.volume_usage` is an aggregate
+    // summary object whose per-volume detail lives in `items` as raw JSON
+    // (`Vec<serde_json::Value>`) rather than a typed `Vec<Volume>`. We deserialize
+    // each item back into a `Volume` ourselves to recover `usage_data`
+    // (size / ref_count), which `list_volumes` does not return.
     let usage_by_name: std::collections::HashMap<String, (i64, i64)> = df
-        .volumes
+        .volume_usage
+        .and_then(|vu| vu.items)
         .unwrap_or_default()
         .into_iter()
-        .filter_map(|v| {
-            let usage = v.usage_data?;
-            Some((v.name, (usage.size as i64, usage.ref_count as i64)))
+        .filter_map(|item| {
+            let volume: bollard::models::Volume = serde_json::from_value(item).ok()?;
+            let usage = volume.usage_data?;
+            Some((volume.name, (usage.size, usage.ref_count)))
         })
         .collect();
 
@@ -291,9 +299,9 @@ pub async fn get_volumes() -> Result<Vec<VolumeInfo>, String> {
 
 #[tauri::command]
 pub async fn get_volume_containers(name: String) -> Result<Vec<String>, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let containers = docker
-        .list_containers(Some(ListContainersOptions::<String> {
+        .list_containers(Some(ListContainersOptions {
             all: true,
             ..Default::default()
         }))
@@ -319,9 +327,9 @@ pub async fn get_volume_containers(name: String) -> Result<Vec<String>, String> 
 
 #[tauri::command]
 pub async fn prune_volumes() -> Result<String, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let result = docker
-        .prune_volumes(None::<bollard::volume::PruneVolumesOptions<String>>)
+        .prune_volumes(None::<PruneVolumesOptions>)
         .await
         .map_err(|e| e.to_string())?;
 
@@ -337,7 +345,7 @@ pub async fn prune_volumes() -> Result<String, String> {
 
 #[tauri::command]
 pub async fn delete_volume(name: String) -> Result<(), String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     docker
         .remove_volume(&name, None::<RemoveVolumeOptions>)
         .await
@@ -350,11 +358,11 @@ pub async fn create_volume(
     driver: String,
     labels: HashMap<String, String>,
 ) -> Result<(), String> {
-    let docker = get_docker()?;
-    let options = CreateVolumeOptions {
-        name,
-        driver,
-        labels,
+    let docker = get_docker().await?;
+    let options = VolumeCreateRequest {
+        name: Some(name),
+        driver: Some(driver),
+        labels: Some(labels),
         ..Default::default()
     };
     docker
@@ -366,7 +374,7 @@ pub async fn create_volume(
 
 #[tauri::command]
 pub async fn inspect_volume(name: String) -> Result<String, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let inspect = docker
         .inspect_volume(&name)
         .await
