@@ -89,6 +89,9 @@ importers:
       next-themes:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      pnpm:
+        specifier: ^11.26.0
+        version: 11.26.0
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -3083,6 +3086,11 @@ packages:
   pkg-conf@2.1.0:
     resolution: {integrity: sha512-C+VUP+8jis7EsQZIhDYmS5qlNtjv2yP4SNtjXK9AP1ZcTRlnSfuumaTnRfYZnYgUUYVIKqL0fRvmUGDV2fmp6g==}
     engines: {node: '>=4'}
+
+  pnpm@11.26.0:
+    resolution: {integrity: sha512-/A4r+JC5+YNhHxq2jAY3vOkUOQZTaZ+DwaeLAF7SXyyB53kgyP2O7i7PC1iyjNywCoTZf2m898VrLzRHECOGZA==}
+    engines: {node: '>=22.13'}
+    hasBin: true
 
   postcss-import@15.1.0:
     resolution: {integrity: sha512-hpr+J05B2FVYUAXHeK1YyI267J/dDDhMU6B6civm8hSY1jYJnBXxzKDKDswzJmtLHryrjhnDjqqp/49t8FALew==}
@@ -6669,6 +6677,8 @@ snapshots:
     dependencies:
       find-up: 2.1.0
       load-json-file: 4.0.0
+
+  pnpm@11.26.0: {}
 
   postcss-import@15.1.0(postcss@8.5.28):
     dependencies:
