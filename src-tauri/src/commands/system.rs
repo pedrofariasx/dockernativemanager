@@ -72,7 +72,7 @@ pub async fn download_update(url: String, filename: String) -> Result<String, St
 
 #[tauri::command]
 pub async fn get_system_info() -> Result<SystemInfo, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let info = docker.info().await.map_err(|e| e.to_string())?;
     let version = docker.version().await.map_err(|e| e.to_string())?;
 

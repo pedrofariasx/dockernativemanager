@@ -1,16 +1,23 @@
-## [1.15.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1...v1.15.2) (2026-08-30)
+# [1.16.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.3...v1.16.0-beta.1) (2026-09-10)
+
+
+### Features
+
+* atualiza bollard para ultima versão 0.21.x ([f194177](https://github.com/pedrofariasx/dockernativemanager/commit/f19417782fb96320505aed40bfeebd272ba07667))
+
+## [1.15.1-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.2...v1.15.1-beta.3) (2026-09-10)
 
 
 ### Bug Fixes
 
-* **frontend:** resolve oxlint CI violations ([90afdba](https://github.com/pedrofariasx/dockernativemanager/commit/90afdba58f98dfd59504e45852fdf0df2b508813))
+* restore splash skeleton stylesheet ([e79e4ac](https://github.com/pedrofariasx/dockernativemanager/commit/e79e4ac43f2844e4e7ec769aa5bed34615c6bfad))
 
-## [1.15.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0...v1.15.1) (2026-07-27)
+## [1.15.1-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.1...v1.15.1-beta.2) (2026-08-30)
 
 
 ### Bug Fixes
 
-* mover CSS do skeleton para arquivo externo e isolar suas variáveis com --sk- ([0c25a6f](https://github.com/pedrofariasx/dockernativemanager/commit/0c25a6f7764aeb4ce2f8a376bb8b0cb139f4668d))
+* **frontend:** resolve lint errors blocking CI frontend job ([18d3302](https://github.com/pedrofariasx/dockernativemanager/commit/18d3302d0bd4cee2e2d5fd6b239410782c99f4fa))
 
 ## [1.15.1-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0...v1.15.1-beta.1) (2026-07-27)
 

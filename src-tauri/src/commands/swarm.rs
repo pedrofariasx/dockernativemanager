@@ -11,11 +11,11 @@
 use crate::models::{NodeInfo, ServiceInfo, SwarmInfo};
 use crate::utils::get_docker;
 use bollard::models::LocalNodeState;
-use bollard::service::ListServicesOptions;
+use bollard::query_parameters::{InspectServiceOptions, ListServicesOptions};
 
 #[tauri::command]
 pub async fn get_swarm_info() -> Result<Option<SwarmInfo>, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let info = docker
         .info()
         .await
@@ -107,9 +107,9 @@ pub async fn list_nodes() -> Result<Vec<NodeInfo>, String> {
 
 #[tauri::command]
 pub async fn list_services() -> Result<Vec<ServiceInfo>, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let services = docker
-        .list_services(None::<ListServicesOptions<String>>)
+        .list_services(None::<ListServicesOptions>)
         .await
         .map_err(|e: bollard::errors::Error| e.to_string())?;
 
@@ -191,9 +191,9 @@ pub async fn list_services() -> Result<Vec<ServiceInfo>, String> {
 
 #[tauri::command]
 pub async fn inspect_service(id: String) -> Result<String, String> {
-    let docker = get_docker()?;
+    let docker = get_docker().await?;
     let service = docker
-        .inspect_service(&id, None::<bollard::service::InspectServiceOptions>)
+        .inspect_service(&id, None::<InspectServiceOptions>)
         .await
         .map_err(|e: bollard::errors::Error| e.to_string())?;
     serde_json::to_string_pretty(&service).map_err(|e: serde_json::Error| e.to_string())
