@@ -1,3 +1,16 @@
+# [1.16.0](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.2...v1.16.0) (2026-09-10)
+
+
+### Bug Fixes
+
+* **frontend:** resolve lint errors blocking CI frontend job ([18d3302](https://github.com/pedrofariasx/dockernativemanager/commit/18d3302d0bd4cee2e2d5fd6b239410782c99f4fa))
+* restore splash skeleton stylesheet ([e79e4ac](https://github.com/pedrofariasx/dockernativemanager/commit/e79e4ac43f2844e4e7ec769aa5bed34615c6bfad))
+
+
+### Features
+
+* atualiza bollard para ultima versão 0.21.x ([f194177](https://github.com/pedrofariasx/dockernativemanager/commit/f19417782fb96320505aed40bfeebd272ba07667))
+
 # [1.16.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.3...v1.16.0-beta.1) (2026-09-10)
 
 
