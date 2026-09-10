@@ -1,3 +1,27 @@
+## [1.16.1-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.0...v1.16.1-beta.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* **vite:** replace __dirname with import.meta.dirname ([f14c032](https://github.com/pedrofariasx/dockernativemanager/commit/f14c03291459bfd8a87a9c11ab670623d4fc05bd))
+
+
+### Performance Improvements
+
+* **vite:** substituir plugin react-swc por react ([ba54015](https://github.com/pedrofariasx/dockernativemanager/commit/ba54015692d8e5eeea71f654cd2a94ea8d75dff2))
+
+# [1.16.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.0-beta.1...v1.16.0-beta.2) (2026-09-10)
+
+
+### Bug Fixes
+
+* **vite:** replace __dirname with import.meta.dirname ([f14c032](https://github.com/pedrofariasx/dockernativemanager/commit/f14c03291459bfd8a87a9c11ab670623d4fc05bd))
+
+
+### Performance Improvements
+
+* **vite:** substituir plugin react-swc por react ([ba54015](https://github.com/pedrofariasx/dockernativemanager/commit/ba54015692d8e5eeea71f654cd2a94ea8d75dff2))
+
 # [1.16.0](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.2...v1.16.0) (2026-09-10)
 
 
