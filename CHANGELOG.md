@@ -1,3 +1,10 @@
+## [1.16.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.1...v1.16.2) (2026-09-13)
+
+
+### Bug Fixes
+
+* resolve Monaco Editor 404 for loader.js.map by serving local assets ([a878073](https://github.com/pedrofariasx/dockernativemanager/commit/a8780735b386439d2df7531a3f2f7b139289255a))
+
 ## [1.16.2-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.1...v1.16.2-beta.1) (2026-09-13)
 
 
