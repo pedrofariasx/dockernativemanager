@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "build:dev": "vite build --mode development",
+    "dev": "pnpm prepare:monaco && vite",
+    "build": "pnpm prepare:monaco && vite build",
+    "build:dev": "pnpm prepare:monaco && vite build --mode development",
     "lint": "oxlint .",
     "lint:fix": "oxlint --fix .",
     "format": "prettier --write \"src/**/*.{ts,tsx,json,css,md}\"",
@@ -16,7 +16,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
-    "prepare": "husky"
+    "prepare": "husky",
+    "prepare:monaco": "node scripts/prepare-monaco.js"
   },
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",

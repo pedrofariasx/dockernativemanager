@@ -9,7 +9,7 @@
     "no-unused-vars": "off",
     "only-export-components": ["warn", { "allowConstantExport": true }]
   },
-  "ignorePatterns": ["dist", "src-tauri"],
+  "ignorePatterns": ["dist", "src-tauri", "public/monaco"],
   "env": {
     "builtin": true
   }
