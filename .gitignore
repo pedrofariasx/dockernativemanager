@@ -25,3 +25,4 @@ dist-ssr
 
 # Tauri
 src-tauri/target
+public/monaco

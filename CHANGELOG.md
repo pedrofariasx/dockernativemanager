@@ -1,14 +1,16 @@
-## [1.16.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.0...v1.16.1) (2026-09-10)
+## [1.16.2-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.1...v1.16.2-beta.1) (2026-09-13)
 
 
 ### Bug Fixes
 
-* **vite:** replace __dirname with import.meta.dirname ([f14c032](https://github.com/pedrofariasx/dockernativemanager/commit/f14c03291459bfd8a87a9c11ab670623d4fc05bd))
+* resolve Monaco Editor 404 for loader.js.map by serving local assets ([a878073](https://github.com/pedrofariasx/dockernativemanager/commit/a8780735b386439d2df7531a3f2f7b139289255a))
+
+## [1.16.1-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.1-beta.1...v1.16.1-beta.2) (2026-09-13)
 
 
-### Performance Improvements
+### Bug Fixes
 
-* **vite:** substituir plugin react-swc por react ([ba54015](https://github.com/pedrofariasx/dockernativemanager/commit/ba54015692d8e5eeea71f654cd2a94ea8d75dff2))
+* resolve Monaco Editor 404 for loader.js.map by serving local assets ([a878073](https://github.com/pedrofariasx/dockernativemanager/commit/a8780735b386439d2df7531a3f2f7b139289255a))
 
 ## [1.16.1-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.0...v1.16.1-beta.1) (2026-09-10)
 

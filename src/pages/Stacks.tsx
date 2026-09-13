@@ -80,10 +80,16 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { save } from "@tauri-apps/plugin-dialog";
 import { writeTextFile } from "@tauri-apps/plugin-fs";
-import Editor from "@monaco-editor/react";
+import Editor, { loader } from "@monaco-editor/react";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { startContainer, stopContainer, restartContainer } from "@/lib/docker";
+
+loader.config({
+  paths: {
+    vs: "/monaco/min/vs",
+  },
+});
 
 const COMPOSE_TEMPLATES = [
   {
