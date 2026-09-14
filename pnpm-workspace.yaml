@@ -1,5 +1,6 @@
 allowBuilds:
   "@swc/core": true
   esbuild: true
+  pnpm: true
 minimumReleaseAgeExclude:
   - lucide-react@1.25.0
