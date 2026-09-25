@@ -1,3 +1,10 @@
+# [1.17.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.2-beta.1...v1.17.0-beta.1) (2026-09-25)
+
+
+### Features
+
+* add password authentication and auto-setup for remote contexts ([800e9ce](https://github.com/pedrofariasx/dockernativemanager/commit/800e9ce323e8c8f8685625c5e40854c6bd046910))
+
 ## [1.16.2-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.1...v1.16.2-beta.1) (2026-09-13)
 
 
