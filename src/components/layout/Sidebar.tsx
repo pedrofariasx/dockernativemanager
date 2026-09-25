@@ -40,6 +40,9 @@ import {
   Package,
   Wifi,
   KeyRound,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import {
@@ -49,6 +52,8 @@ import {
   createDockerContext,
   removeDockerContext,
   testDockerConnection,
+  setupDockerContextWithPassword,
+  generateSshKey,
   listSshKeys,
   configureSshHost,
   openExternalLink,
@@ -118,6 +123,10 @@ const Sidebar = () => {
   const [sshKeys, setSshKeys] = useState<SshKeyInfo[]>([]);
   const [selectedSshKey, setSelectedSshKey] = useState<string>("");
   const [showSshConfig, setShowSshConfig] = useState(false);
+  const [authMethod, setAuthMethod] = useState<"password" | "key">("password");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isGeneratingKey, setIsGeneratingKey] = useState(false);
 
   const handleDownload = async (asset: { id: number; name: string; browser_download_url: string }) => {
     setDownloadingAsset(String(asset.id));
@@ -239,18 +248,54 @@ const Sidebar = () => {
     }
   };
 
+  const handleGenerateKey = async () => {
+    setIsGeneratingKey(true);
+    try {
+      const newKey = await generateSshKey();
+      showSuccess(`SSH key generated: ${newKey.name}`);
+      const updatedKeys = await listSshKeys();
+      setSshKeys(updatedKeys);
+      setSelectedSshKey(newKey.path);
+    } catch (err) {
+      showError(`Error generating SSH key: ${err}`);
+    } finally {
+      setIsGeneratingKey(false);
+    }
+  };
+
   const handleCreateContext = async () => {
     if (!newContext.name || !newContext.host) {
       showError("Name and Host are required");
       return;
     }
+
+    const host =
+      !newContext.host.startsWith("ssh://") && !newContext.host.startsWith("tcp://")
+        ? `ssh://${newContext.host}`
+        : newContext.host;
+
     setIsCreatingContext(true);
     try {
+      if (host.startsWith("ssh://") && authMethod === "password") {
+        if (!password) {
+          showError("Password is required for password authentication");
+          setIsCreatingContext(false);
+          return;
+        }
+        const hostname = await setupDockerContextWithPassword(newContext.name, host, password);
+        showSuccess(`Context ${newContext.name} created! Connected to: ${hostname}`);
+        setNewContext({ name: "", host: "" });
+        setPassword("");
+        setConnectionTestResult(null);
+        await fetchContexts();
+        return;
+      }
+
       // If SSH host and a key is selected, configure SSH first
-      if (newContext.host.startsWith("ssh://") && selectedSshKey) {
+      if (host.startsWith("ssh://") && selectedSshKey) {
         try {
           // Parse user@host from ssh://user@host URL
-          const sshPart = newContext.host.replace("ssh://", "");
+          const sshPart = host.replace("ssh://", "");
           const [user, ...hostParts] = sshPart.split("@");
           const hostWithPort = hostParts.join("@");
           const [hostname, portStr] = hostWithPort.split(":");
@@ -265,10 +310,11 @@ const Sidebar = () => {
         }
       }
 
-      await createDockerContext(newContext.name, newContext.host);
+      await createDockerContext(newContext.name, host);
       showSuccess(`Context ${newContext.name} created`);
       setNewContext({ name: "", host: "" });
       setSelectedSshKey("");
+      setPassword("");
       setConnectionTestResult(null);
       setShowSshConfig(false);
       await fetchContexts();
@@ -284,10 +330,20 @@ const Sidebar = () => {
       showError("Host URL is required to test connection");
       return;
     }
+
+    const host =
+      !newContext.host.startsWith("ssh://") && !newContext.host.startsWith("tcp://")
+        ? `ssh://${newContext.host}`
+        : newContext.host;
+
     setIsTestingConnection(true);
     setConnectionTestResult(null);
     try {
-      const hostname = await testDockerConnection(newContext.host, selectedSshKey || undefined);
+      const hostname = await testDockerConnection(
+        host,
+        authMethod === "key" ? selectedSshKey || undefined : undefined,
+        authMethod === "password" ? password || undefined : undefined,
+      );
       setConnectionTestResult({ success: true, message: `Connected to: ${hostname}` });
       showSuccess(`Connection successful! Host: ${hostname}`);
     } catch (err) {
@@ -596,39 +652,106 @@ const Sidebar = () => {
                     onChange={(e) => {
                       setNewContext((prev) => ({ ...prev, host: e.target.value }));
                       setConnectionTestResult(null);
-                      // Auto-show SSH config when SSH URL is entered
-                      if (e.target.value.startsWith("ssh://")) {
-                        setShowSshConfig(true);
-                      }
                     }}
                     className="h-9 bg-muted/30 focus-visible:ring-0 focus-visible:ring-offset-0"
                   />
                 </div>
-                {newContext.host.startsWith("ssh://") && (
-                  <Collapsible open={showSshConfig} onOpenChange={setShowSshConfig}>
-                    <CollapsibleTrigger asChild>
+
+                {(!newContext.host || !newContext.host.startsWith("tcp://")) && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">
+                      Authentication Method
+                    </label>
+                    <div className="grid grid-cols-2 gap-2 p-1 bg-muted/20 rounded-lg border border-border/40">
                       <Button
-                        variant="ghost"
-                        className="w-full justify-between h-8 px-2 text-muted-foreground hover:text-foreground"
-                      >
-                        <div className="flex items-center gap-2">
-                          <KeyRound className="w-3.5 h-3.5" />
-                          <span className="text-[11px] font-semibold uppercase">SSH Key Configuration</span>
-                        </div>
-                        {showSshConfig ? (
-                          <ChevronUp className="w-3.5 h-3.5" />
-                        ) : (
-                          <ChevronDown className="w-3.5 h-3.5" />
+                        type="button"
+                        variant={authMethod === "password" ? "secondary" : "ghost"}
+                        size="sm"
+                        className={cn(
+                          "h-8 text-xs font-semibold gap-1.5",
+                          authMethod === "password" && "bg-background shadow-xs text-foreground",
                         )}
+                        onClick={() => {
+                          setAuthMethod("password");
+                          setConnectionTestResult(null);
+                        }}
+                      >
+                        <Lock className="w-3.5 h-3.5 text-primary" />
+                        Password (Auto Setup)
                       </Button>
-                    </CollapsibleTrigger>
-                    <CollapsibleContent className="space-y-2 pt-1">
-                      <div className="space-y-1">
+                      <Button
+                        type="button"
+                        variant={authMethod === "key" ? "secondary" : "ghost"}
+                        size="sm"
+                        className={cn(
+                          "h-8 text-xs font-semibold gap-1.5",
+                          authMethod === "key" && "bg-background shadow-xs text-foreground",
+                        )}
+                        onClick={() => {
+                          setAuthMethod("key");
+                          setConnectionTestResult(null);
+                        }}
+                      >
+                        <KeyRound className="w-3.5 h-3.5 text-primary" />
+                        SSH Key
+                      </Button>
+                    </div>
+
+                    {authMethod === "password" ? (
+                      <div className="space-y-1.5 pt-1">
                         <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">
-                          SSH Private Key
+                          Remote Server Password
                         </label>
+                        <div className="relative">
+                          <Input
+                            type={showPassword ? "text" : "password"}
+                            placeholder="Enter password for remote user"
+                            value={password}
+                            onChange={(e) => {
+                              setPassword(e.target.value);
+                              setConnectionTestResult(null);
+                            }}
+                            className="h-9 bg-muted/30 pr-10 focus-visible:ring-0 focus-visible:ring-offset-0"
+                          />
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7 text-muted-foreground hover:text-foreground"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </Button>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground ml-1 leading-relaxed">
+                          Docker Native Manager will automatically authorize an SSH key on the remote server using this
+                          password once.
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2 pt-1">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[10px] uppercase font-bold text-muted-foreground ml-1">
+                            SSH Private Key
+                          </label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 text-[10px] gap-1 px-2 text-primary hover:text-primary/80"
+                            onClick={handleGenerateKey}
+                            disabled={isGeneratingKey}
+                          >
+                            {isGeneratingKey ? (
+                              <Loader2 className="w-3 h-3 animate-spin" />
+                            ) : (
+                              <Plus className="w-3 h-3" />
+                            )}
+                            Generate Key
+                          </Button>
+                        </div>
                         {sshKeys.length > 0 ? (
-                          <div className="grid gap-1.5">
+                          <div className="grid gap-1.5 max-h-36 overflow-y-auto pr-1">
                             {sshKeys.map((key) => (
                               <Button
                                 key={key.path}
@@ -653,22 +776,33 @@ const Sidebar = () => {
                             ))}
                           </div>
                         ) : (
-                          <p className="text-[10px] text-muted-foreground p-2 text-center">
-                            No SSH keys found in ~/.ssh/
-                          </p>
+                          <div className="p-3 text-center border border-dashed rounded-md bg-muted/10 space-y-1.5">
+                            <p className="text-[11px] text-muted-foreground">No SSH keys found in ~/.ssh/</p>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs gap-1 font-semibold"
+                              onClick={handleGenerateKey}
+                              disabled={isGeneratingKey}
+                            >
+                              <Plus className="w-3 h-3" />
+                              Generate id_ed25519 Key
+                            </Button>
+                          </div>
+                        )}
+                        {selectedSshKey && (
+                          <div className="text-[10px] text-primary bg-primary/5 border border-primary/20 rounded-md p-2">
+                            Selected: <span className="font-mono font-bold">{selectedSshKey}</span>
+                          </div>
                         )}
                       </div>
-                      {selectedSshKey && (
-                        <div className="text-[10px] text-primary bg-primary/5 border border-primary/20 rounded-md p-2">
-                          Selected: <span className="font-mono font-bold">{selectedSshKey}</span>
-                        </div>
-                      )}
-                    </CollapsibleContent>
-                  </Collapsible>
+                    )}
+                  </div>
                 )}
-                <div className="flex gap-2">
+
+                <div className="flex gap-2 pt-1">
                   <Button
-                    className="flex-1 gap-2 mt-2 h-10 font-bold"
+                    className="flex-1 gap-2 h-10 font-bold"
                     variant="outline"
                     onClick={handleTestConnection}
                     disabled={isTestingConnection || !newContext.host}
@@ -677,10 +811,15 @@ const Sidebar = () => {
                     Test
                   </Button>
                   <Button
-                    className="flex-1 gap-2 mt-2 h-10 font-bold"
+                    className="flex-1 gap-2 h-10 font-bold"
                     variant="outline"
                     onClick={handleCreateContext}
-                    disabled={isCreatingContext || !newContext.name || !newContext.host}
+                    disabled={
+                      isCreatingContext ||
+                      !newContext.name ||
+                      !newContext.host ||
+                      (authMethod === "password" && !newContext.host.startsWith("tcp://") && !password)
+                    }
                   >
                     {isCreatingContext ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                     Add Context
@@ -699,9 +838,6 @@ const Sidebar = () => {
                   </div>
                 )}
               </div>
-              <p className="text-[10px] text-center text-muted-foreground italic mt-2">
-                For SSH connections, select your private key above. The app will configure ~/.ssh/config automatically.
-              </p>
             </div>
           </div>
 

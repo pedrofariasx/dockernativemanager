@@ -113,6 +113,8 @@ fn main() {
             create_docker_context,
             remove_docker_context,
             test_docker_connection,
+            setup_docker_context_with_password,
+            generate_ssh_key,
             list_ssh_keys,
             configure_ssh_host,
             remove_ssh_host_config,

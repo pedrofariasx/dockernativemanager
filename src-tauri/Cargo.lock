@@ -697,6 +697,7 @@ dependencies = [
 name = "docker-native-manager"
 version = "1.16.2-beta.1"
 dependencies = [
+ "base64 0.22.1",
  "bollard",
  "chrono",
  "futures-util",

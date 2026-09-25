@@ -96,4 +96,29 @@ mod tests {
         assert_eq!(json["driver"], "local");
         assert_eq!(json["labels"]["project"], "demo");
     }
+
+    #[test]
+    fn test_parse_ssh_target() {
+        use crate::commands::system::parse_ssh_target;
+
+        let res = parse_ssh_target("ssh://ubuntu@192.168.0.200").unwrap();
+        assert_eq!(res, ("ubuntu".to_string(), "192.168.0.200".to_string(), 22));
+
+        let res2 = parse_ssh_target("ssh://ubuntu@192.168.0.200:2222").unwrap();
+        assert_eq!(
+            res2,
+            ("ubuntu".to_string(), "192.168.0.200".to_string(), 2222)
+        );
+
+        let res3 = parse_ssh_target("ubuntu@192.168.0.200").unwrap();
+        assert_eq!(
+            res3,
+            ("ubuntu".to_string(), "192.168.0.200".to_string(), 22)
+        );
+
+        let res4 = parse_ssh_target("root@server.local:2200").unwrap();
+        assert_eq!(res4, ("root".to_string(), "server.local".to_string(), 2200));
+
+        assert!(parse_ssh_target("").is_err());
+    }
 }

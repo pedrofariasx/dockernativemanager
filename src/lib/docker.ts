@@ -618,9 +618,19 @@ export const removeDockerContext = async (name: string): Promise<void> => {
   return await invoke("remove_docker_context", { name });
 };
 
-export const testDockerConnection = async (host: string, sshKey?: string): Promise<string> => {
+export const testDockerConnection = async (host: string, sshKey?: string, password?: string): Promise<string> => {
   if (!isTauri) return "mock-hostname";
-  return await invoke("test_docker_connection", { host, sshKey: sshKey || null });
+  return await invoke("test_docker_connection", { host, sshKey: sshKey || null, password: password || null });
+};
+
+export const setupDockerContextWithPassword = async (name: string, host: string, password: string): Promise<string> => {
+  if (!isTauri) return "mock-hostname";
+  return await invoke("setup_docker_context_with_password", { name, host, password });
+};
+
+export const generateSshKey = async (name?: string): Promise<SshKeyInfo> => {
+  if (!isTauri) return { name: "id_ed25519", path: "/home/user/.ssh/id_ed25519", has_public_key: true };
+  return await invoke("generate_ssh_key", { name: name || null });
 };
 
 export interface SshKeyInfo {
