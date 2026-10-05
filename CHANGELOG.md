@@ -1,3 +1,10 @@
+# [1.17.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.1...v1.17.0-beta.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* remove impure date creation from Images render path ([7132469](https://github.com/pedrofariasx/dockernativemanager/commit/7132469558d54f2a96f85be0ad89d187b0e7a994))
+
 # [1.17.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.2-beta.1...v1.17.0-beta.1) (2026-09-25)
 
 
