@@ -78,6 +78,7 @@ const Images = () => {
   const [containerVolumes, setContainerVolumes] = useState("");
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
   const [filterInUse, setFilterInUse] = useState(false);
+  const [pullingCreatedAt] = useState(() => new Date().toISOString());
 
   const handleDelete = async (id: string, repo: string) => {
     try {
@@ -149,7 +150,7 @@ const Images = () => {
         repository: repo,
         tag: tag || "latest",
         size: "Pulling...",
-        created_at: "1970-01-01T00:00:00.000Z",
+        created_at: pullingCreatedAt,
         isPulling: true,
         status: data.status,
         progress: data.progress,
