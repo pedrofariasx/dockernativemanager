@@ -149,7 +149,7 @@ const Images = () => {
         repository: repo,
         tag: tag || "latest",
         size: "Pulling...",
-        created_at: new Date().toISOString(),
+        created_at: "1970-01-01T00:00:00.000Z",
         isPulling: true,
         status: data.status,
         progress: data.progress,
