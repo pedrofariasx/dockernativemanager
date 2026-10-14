@@ -6,9 +6,17 @@ on:
       tag:
         description: "Tag to build and upload assets"
         required: true
+      apt_repo_mode:
+        description: "O que fazer com o repositório APT"
+        type: choice
+        options:
+          - dry-run
+          - publish
+        default: dry-run
 
 permissions:
   contents: write
+  pages: write
 
 jobs:
   build:
@@ -57,6 +65,13 @@ jobs:
             done
           done
 
+      - name: Upload .deb for APT repository
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-deb
+          path: src-tauri/target/release/bundle/deb/*.deb
+          if-no-files-found: error
+
       - name: Package tar.gz and Upload
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -79,3 +94,148 @@ jobs:
           tar -C dist-targz -czf "$TAR_GZ" docker-native-manager LICENSE
 
           gh release upload "$TAG" "$TAR_GZ" --clobber
+
+  apt-repo:
+    name: Publish APT repository (gh-pages)
+    needs: build
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Import APT signing key
+        env:
+          APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          test -n "$APT_GPG_PRIVATE_KEY" || { echo "::error::secret APT_GPG_PRIVATE_KEY is not set"; exit 1; }
+          echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
+          # permite assinar sem interação em runners headless
+          gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10":6:"}' \
+            | gpg --batch --import-ownertrust
+
+      - name: Download built .deb
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-deb
+          path: deb-out
+
+      - name: Install repository tools
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends apt-utils dpkg-dev gnupg
+
+      - name: Check out gh-pages branch
+        run: |
+          set -euo pipefail
+          git fetch origin gh-pages --depth=1 || true
+          if git show-ref --verify --quiet refs/remotes/origin/gh-pages; then
+            git checkout -B gh-pages refs/remotes/origin/gh-pages
+          else
+            echo "gh-pages não existe ainda, criando..."
+            git checkout --orphan gh-pages
+            git rm -rf . --quiet
+          fi
+
+      - name: Regenerate repository from pool
+        env:
+          TAG: ${{ inputs.tag }}
+          KEEP_VERSIONS: "5"
+        run: |
+          set -euo pipefail
+          mkdir -p pool deb-out dists/stable/main/binary-amd64
+          cp -f deb-out/*.deb pool/
+
+          # mantém apenas as N versões mais recentes (limite de 1 GB do GitHub Pages).
+          # a ordenação usa a versão real do campo control (a que o apt considera),
+          # não o nome do arquivo, para não podar o pacote errado.
+          for deb in pool/docker-native-manager_*_amd64.deb; do
+            printf '%s\t%s\n' "$(dpkg-deb -f "$deb" Version)" "$deb"
+          done | sort -V -r | tail -n +"$((KEEP_VERSIONS + 1))" | cut -f2 | xargs -r rm -f
+
+          apt-ftparchive packages pool > dists/stable/main/binary-amd64/Packages
+          gzip -kf dists/stable/main/binary-amd64/Packages
+
+          # ATENÇÃO: os caminhos no Release precisam ser relativos a dists/stable,
+          # caso contrário o apt ignora o índice silenciosamente.
+          apt-ftparchive \
+            -o APT::FTPArchive::Release::Origin="Docker Native Manager" \
+            -o APT::FTPArchive::Release::Label="Docker Native Manager" \
+            -o APT::FTPArchive::Release::Suite="stable" \
+            -o APT::FTPArchive::Release::Codename="stable" \
+            -o APT::FTPArchive::Release::Architectures="amd64" \
+            -o APT::FTPArchive::Release::Components="main" \
+            -o APT::FTPArchive::Release::Description="Docker Native Manager APT repository" \
+            release dists/stable > dists/stable/Release
+
+          gpg --batch --yes --clearsign -o dists/stable/InRelease dists/stable/Release
+          gpg --batch --yes -abs -o dists/stable/Release.gpg dists/stable/Release
+          gpg --armor --export > pubkey.asc
+          printf 'nojekyll\n' > .nojekyll
+
+          cat > index.html <<'HTML'
+          <!doctype html>
+          <html lang="pt-BR">
+            <head>
+              <meta charset="utf-8">
+              <title>Docker Native Manager - APT</title>
+              <style>
+                body { font-family: system-ui, sans-serif; max-width: 46rem; margin: 4rem auto; padding: 0 1rem; line-height: 1.6; }
+                code, pre { background: #f4f4f5; border-radius: 6px; }
+                pre { padding: 1rem; overflow-x: auto; }
+                code { padding: 0.15rem 0.35rem; font-size: 0.9em; }
+                pre code { background: none; padding: 0; }
+                a { color: #2563eb; }
+              </style>
+            </head>
+            <body>
+              <h1>Docker Native Manager</h1>
+              <p>Repositório APT para instalar o Docker Native Manager em distribuições baseadas em Debian/Ubuntu.</p>
+              <pre><code>curl -fsSL https://pedrofariasx.github.io/dockernativemanager/pubkey.asc \
+                | sudo gpg --dearmor -o /usr/share/keyrings/dockernativemanager.gpg
+
+                echo "deb [signed-by=/usr/share/keyrings/dockernativemanager.gpg] https://pedrofariasx.github.io/dockernativemanager stable main" \
+                  | sudo tee /etc/apt/sources.list.d/dockernativemanager.list
+
+                sudo apt update
+                sudo apt install docker-native-manager</code></pre>
+              <p><a href="https://github.com/pedrofariasx/dockernativemanager">Código-fonte e issues no GitHub</a></p>
+            </body>
+          </html>
+          HTML
+
+      - name: Enable GitHub Pages on branch gh-pages
+        if: ${{ inputs.apt_repo_mode == 'publish' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh api -X POST "repos/${{ github.repository }}/pages" \
+            -f "source[branch]=gh-pages" -f "source[path]=/" \
+            && echo "GitHub Pages habilitado" \
+            || echo "GitHub Pages já estava habilitado"
+
+      - name: Publish repository to gh-pages
+        if: ${{ inputs.apt_repo_mode == 'publish' }}
+        env:
+          TAG: ${{ inputs.tag }}
+        run: |
+          set -euo pipefail
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # deb-out é só o artifact baixado do job de build, não vai para o Pages
+          git add -A -- . ':(exclude)deb-out'
+          git diff --cached --quiet && { echo "Nada a publicar"; exit 0; }
+          git commit -m "apt repo: $TAG"
+          git push origin gh-pages
+          echo "Repositório publicado em https://pedrofariasx.github.io/dockernativemanager" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+      - name: Upload repository as artifact (dry-run)
+        if: ${{ inputs.apt_repo_mode != 'publish' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: apt-repo-preview
+          path: |
+            dists
+            pool
+            pubkey.asc
+            index.html
+            .nojekyll
+          if-no-files-found: error

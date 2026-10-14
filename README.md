@@ -50,6 +50,23 @@ Log out and back in (or restart your VM, if you're using one) for the change to 
 
 ### Distributions using DPKG (Debian, Ubuntu, Mint, etc.)
 
+> **Requires glibc 2.34 or newer** (Ubuntu 22.04+, Debian 12+). Ubuntu 20.04 and Debian 11 are not supported.
+
+Add the APT repository to receive automatic updates:
+
+```bash
+curl -fsSL https://pedrofariasx.github.io/dockernativemanager/pubkey.asc \
+  | sudo gpg --dearmor -o /usr/share/keyrings/dockernativemanager.gpg
+
+echo "deb [signed-by=/usr/share/keyrings/dockernativemanager.gpg] https://pedrofariasx.github.io/dockernativemanager stable main" \
+  | sudo tee /etc/apt/sources.list.d/dockernativemanager.list
+
+sudo apt update
+sudo apt install docker-native-manager
+```
+
+Or install the `.deb` manually from the [latest release](https://github.com/pedrofariasx/dockernativemanager/releases/latest):
+
 ```bash
 sudo apt install ./docker-native-manager-x.y.z-x86_64.deb
 ```
