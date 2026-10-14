@@ -102,6 +102,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+    env:
+      GNUPGHOME: ${{ runner.temp }}/gnupg
+    steps:
+      - uses: actions/checkout@v7
+
       - name: Import APT signing key
         env:
           APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
@@ -109,15 +114,37 @@ jobs:
         run: |
           set -euo pipefail
           test -n "$APT_GPG_PRIVATE_KEY" || { echo "::error::secret APT_GPG_PRIVATE_KEY is not set"; exit 1; }
+          # home dedicado evita depender das permissões do ~/.gnupg do runner
+          mkdir -p "$GNUPGHOME"
+          chmod 700 "$GNUPGHOME"
           echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
           # permite assinar sem interação em runners headless
           gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10":6:"}' \
             | gpg --batch --import-ownertrust
-          if [ -n "$APT_GPG_PASSPHRASE" ]; then
-            echo "chave com passphrase detectada, usando loopback para assinar"
+
+          # valida já aqui se a chave assina sem interação, para falhar com
+          # mensagem acionável em vez do erro obscuro do gpg mais adiante
+          GPG_SIGN=(gpg --batch --yes)
+          if [ -n "${APT_GPG_PASSPHRASE:-}" ]; then
+            # com passphrase, loopback é obrigatório: sem tty no runner o
+            # pinentry falha com "Inappropriate ioctl for device"
+            GPG_SIGN+=(--pinentry-mode loopback --passphrase "$APT_GPG_PASSPHRASE")
+            echo "assinando via loopback (chave com passphrase)"
           else
-            echo "chave sem passphrase detectada"
+            echo "assinando sem passphrase"
           fi
+          TESTFILE="$(mktemp)"
+          echo "teste" > "$TESTFILE"
+          if ! "${GPG_SIGN[@]}" -o "$TESTFILE.sig" --detach-sign "$TESTFILE" 2>/dev/null \
+             || [ ! -s "$TESTFILE.sig" ]; then
+            rm -f "$TESTFILE" "$TESTFILE.sig"
+            echo "::error::a chave não conseguiu assinar sem interação."
+            echo "::error::Se a chave GPG tem passphrase, crie o secret APT_GPG_PASSPHRASE com a senha dela."
+            rm -rf "$GNUPGHOME"
+            exit 1
+          fi
+          rm -f "$TESTFILE" "$TESTFILE.sig"
+          echo "chave importada e validada para assinatura"
 
       - name: Download built .deb
         uses: actions/download-artifact@v4
@@ -151,9 +178,9 @@ jobs:
           # ("Docker Native Manager_1.17.0_amd64.deb"), então globs por
           # "docker-native-manager_*" não casam: usamos qualquer *.deb do pool.
           shopt -s nullglob
-          GPG_SIGN=(gpg --batch --yes --pinentry-mode loopback)
+          GPG_SIGN=(gpg --batch --yes)
           if [ -n "${APT_GPG_PASSPHRASE:-}" ]; then
-            GPG_SIGN+=(--passphrase "$APT_GPG_PASSPHRASE")
+            GPG_SIGN+=(--pinentry-mode loopback --passphrase "$APT_GPG_PASSPHRASE")
           fi
 
           mkdir -p pool deb-out dists/stable/main/binary-amd64
@@ -188,8 +215,9 @@ jobs:
             -o APT::FTPArchive::Release::Description="Docker Native Manager APT repository" \
             release dists/stable > dists/stable/Release
 
-          # loopback é obrigatório: sem tty no runner, o pinentry falha com
-          # "Inappropriate ioctl for device". Funciona com e sem passphrase.
+          # sem tty no runner o pinentry falha com "Inappropriate ioctl for device",
+          # então com passphrase usamos loopback. Sem passphrase, gpg direto:
+          # loopback sem --passphrase faz o gpg travar pedindo entrada em batchmode.
           "${GPG_SIGN[@]}" --clearsign -o dists/stable/InRelease dists/stable/Release
           "${GPG_SIGN[@]}" -abs -o dists/stable/Release.gpg dists/stable/Release
           gpg --armor --export > pubkey.asc
