@@ -1,3 +1,10 @@
+# [1.17.0-beta.4](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.3...v1.17.0-beta.4) (2026-10-14)
+
+
+### Bug Fixes
+
+* only use gpg loopback when a passphrase is provided ([e3acb70](https://github.com/pedrofariasx/dockernativemanager/commit/e3acb708415a7632ce0220e27fafd1d10c4fef9e))
+
 # [1.17.0-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.2...v1.17.0-beta.3) (2026-10-14)
 
 
