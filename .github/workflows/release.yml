@@ -105,6 +105,7 @@ jobs:
       - name: Import APT signing key
         env:
           APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
         run: |
           set -euo pipefail
           test -n "$APT_GPG_PRIVATE_KEY" || { echo "::error::secret APT_GPG_PRIVATE_KEY is not set"; exit 1; }
@@ -112,6 +113,11 @@ jobs:
           # permite assinar sem interação em runners headless
           gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10":6:"}' \
             | gpg --batch --import-ownertrust
+          if [ -n "$APT_GPG_PASSPHRASE" ]; then
+            echo "chave com passphrase detectada, usando loopback para assinar"
+          else
+            echo "chave sem passphrase detectada"
+          fi
 
       - name: Download built .deb
         uses: actions/download-artifact@v4
@@ -138,17 +144,34 @@ jobs:
         env:
           TAG: ${{ inputs.tag }}
           KEEP_VERSIONS: "5"
+          APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
         run: |
           set -euo pipefail
+          # o Tauri nomeia o .deb como "<productName>_<versão>_<arch>.deb"
+          # ("Docker Native Manager_1.17.0_amd64.deb"), então globs por
+          # "docker-native-manager_*" não casam: usamos qualquer *.deb do pool.
+          shopt -s nullglob
+          GPG_SIGN=(gpg --batch --yes --pinentry-mode loopback)
+          if [ -n "${APT_GPG_PASSPHRASE:-}" ]; then
+            GPG_SIGN+=(--passphrase "$APT_GPG_PASSPHRASE")
+          fi
+
           mkdir -p pool deb-out dists/stable/main/binary-amd64
           cp -f deb-out/*.deb pool/
 
           # mantém apenas as N versões mais recentes (limite de 1 GB do GitHub Pages).
           # a ordenação usa a versão real do campo control (a que o apt considera),
           # não o nome do arquivo, para não podar o pacote errado.
-          for deb in pool/docker-native-manager_*_amd64.deb; do
-            printf '%s\t%s\n' "$(dpkg-deb -f "$deb" Version)" "$deb"
-          done | sort -V -r | tail -n +"$((KEEP_VERSIONS + 1))" | cut -f2 | xargs -r rm -f
+          mapfile -t POOL < <(
+            for deb in pool/*.deb; do
+              printf '%s\t%s\n' "$(dpkg-deb -f "$deb" Version)" "$deb"
+            done | sort -V -r
+          )
+          if [ "${#POOL[@]}" -eq 0 ]; then
+            echo "::error::nenhum .deb no pool"; exit 1
+          fi
+          echo "no pool: ${#POOL[@]} versão(ões); mantendo as $KEEP_VERSIONS mais recentes"
+          printf '%s\n' "${POOL[@]:KEEP_VERSIONS}" | cut -f2 | xargs -r rm -f
 
           apt-ftparchive packages pool > dists/stable/main/binary-amd64/Packages
           gzip -kf dists/stable/main/binary-amd64/Packages
@@ -165,8 +188,10 @@ jobs:
             -o APT::FTPArchive::Release::Description="Docker Native Manager APT repository" \
             release dists/stable > dists/stable/Release
 
-          gpg --batch --yes --clearsign -o dists/stable/InRelease dists/stable/Release
-          gpg --batch --yes -abs -o dists/stable/Release.gpg dists/stable/Release
+          # loopback é obrigatório: sem tty no runner, o pinentry falha com
+          # "Inappropriate ioctl for device". Funciona com e sem passphrase.
+          "${GPG_SIGN[@]}" --clearsign -o dists/stable/InRelease dists/stable/Release
+          "${GPG_SIGN[@]}" -abs -o dists/stable/Release.gpg dists/stable/Release
           gpg --armor --export > pubkey.asc
           printf 'nojekyll\n' > .nojekyll
 
