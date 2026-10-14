@@ -1,3 +1,10 @@
+# [1.17.0-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.2...v1.17.0-beta.3) (2026-10-14)
+
+
+### Bug Fixes
+
+* apt repo deb glob and gpg signing without tty ([4fef260](https://github.com/pedrofariasx/dockernativemanager/commit/4fef260c123fede4b5511cceb4441942a709b71a))
+
 # [1.17.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.1...v1.17.0-beta.2) (2026-10-05)
 
 
