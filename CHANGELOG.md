@@ -1,3 +1,10 @@
+# [1.17.0-beta.5](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.4...v1.17.0-beta.5) (2026-10-15)
+
+
+### Features
+
+* add one-line installer script for the apt repository ([4878dab](https://github.com/pedrofariasx/dockernativemanager/commit/4878dab337e1543a999324858c8d5e45bc3af752)), closes [#pages](https://github.com/pedrofariasx/dockernativemanager/issues/pages)
+
 # [1.17.0-beta.4](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.3...v1.17.0-beta.4) (2026-10-14)
 
 
