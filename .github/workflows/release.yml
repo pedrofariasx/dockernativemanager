@@ -261,17 +261,6 @@ jobs:
           </html>
           HTML
 
-      - name: Enable GitHub Pages on branch gh-pages
-        if: ${{ inputs.apt_repo_mode == 'publish' }}
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -euo pipefail
-          gh api -X POST "repos/${{ github.repository }}/pages" \
-            -f "source[branch]=gh-pages" -f "source[path]=/" \
-            && echo "GitHub Pages habilitado" \
-            || echo "GitHub Pages já estava habilitado"
-
       - name: Publish repository to gh-pages
         if: ${{ inputs.apt_repo_mode == 'publish' }}
         env:
@@ -286,6 +275,24 @@ jobs:
           git commit -m "apt repo: $TAG"
           git push origin gh-pages
           echo "Repositório publicado em https://pedrofariasx.github.io/dockernativemanager" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+      - name: Ensure GitHub Pages is enabled
+        if: ${{ inputs.apt_repo_mode == 'publish' }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          # o GITHUB_TOKEN não pode criar o site do Pages (403), então se ainda não
+          # existir apenas avisamos: é um passo manual de uma única vez.
+          if gh api "repos/${{ github.repository }}/pages" >/dev/null 2>&1; then
+            echo "GitHub Pages já habilitado em gh-pages"
+          elif gh api -X POST "repos/${{ github.repository }}/pages" \
+               -f "source[branch]=gh-pages" -f "source[path]=/" >/dev/null 2>&1; then
+            echo "GitHub Pages habilitado na branch gh-pages"
+          else
+            echo "::warning::Habilite o GitHub Pages manualmente:"
+            echo "::warning::Settings → Pages → Source: Deploy from a branch → gh-pages / (root)"
+          fi
 
       - name: Upload repository as artifact (dry-run)
         if: ${{ inputs.apt_repo_mode != 'publish' }}
