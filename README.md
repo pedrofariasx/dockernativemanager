@@ -52,7 +52,13 @@ Log out and back in (or restart your VM, if you're using one) for the change to 
 
 > **Requires glibc 2.34 or newer** (Ubuntu 22.04+, Debian 12+). Ubuntu 20.04 and Debian 11 are not supported.
 
-Add the APT repository to receive automatic updates:
+The fastest way:
+
+```bash
+curl -fsSL https://pedrofariasx.github.io/dockernativemanager/install.sh | sudo bash
+```
+
+Or add the APT repository manually to receive automatic updates:
 
 ```bash
 curl -fsSL https://pedrofariasx.github.io/dockernativemanager/pubkey.asc \
