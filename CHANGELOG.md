@@ -1,3 +1,10 @@
+# [1.17.0-beta.7](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.6...v1.17.0-beta.7) (2026-10-15)
+
+
+### Bug Fixes
+
+* publish before checking pages and report the 403 honestly ([19d614a](https://github.com/pedrofariasx/dockernativemanager/commit/19d614af7eb7c2d16f928f81074414a9167db098))
+
 # [1.17.0-beta.6](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.5...v1.17.0-beta.6) (2026-10-15)
 
 
