@@ -333,6 +333,7 @@ jobs:
             dists
             pool
             pubkey.asc
+            install.sh
             index.html
             .nojekyll
           if-no-files-found: error
