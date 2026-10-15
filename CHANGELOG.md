@@ -1,0 +1,305 @@
+# [1.17.0-beta.8](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.7...v1.17.0-beta.8) (2026-10-15)
+
+
+### Bug Fixes
+
+* include install.sh in the dry-run repository preview ([ff6a494](https://github.com/pedrofariasx/dockernativemanager/commit/ff6a494e87d9524a105c57ff84caa4c8f92f573f))
+
+# [1.17.0-beta.7](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.6...v1.17.0-beta.7) (2026-10-15)
+
+
+### Bug Fixes
+
+* publish before checking pages and report the 403 honestly ([19d614a](https://github.com/pedrofariasx/dockernativemanager/commit/19d614af7eb7c2d16f928f81074414a9167db098))
+
+# [1.17.0-beta.6](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.5...v1.17.0-beta.6) (2026-10-15)
+
+
+### Bug Fixes
+
+* restore apt-repo job structure broken by misplaced env block ([b23eb30](https://github.com/pedrofariasx/dockernativemanager/commit/b23eb3079bd372438116fe975eea677b3b82e28d))
+
+# [1.17.0-beta.5](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.4...v1.17.0-beta.5) (2026-10-15)
+
+
+### Features
+
+* add one-line installer script for the apt repository ([4878dab](https://github.com/pedrofariasx/dockernativemanager/commit/4878dab337e1543a999324858c8d5e45bc3af752)), closes [#pages](https://github.com/pedrofariasx/dockernativemanager/issues/pages)
+
+# [1.17.0-beta.4](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.3...v1.17.0-beta.4) (2026-10-14)
+
+
+### Bug Fixes
+
+* only use gpg loopback when a passphrase is provided ([e3acb70](https://github.com/pedrofariasx/dockernativemanager/commit/e3acb708415a7632ce0220e27fafd1d10c4fef9e))
+
+# [1.17.0-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.2...v1.17.0-beta.3) (2026-10-14)
+
+
+### Bug Fixes
+
+* apt repo deb glob and gpg signing without tty ([4fef260](https://github.com/pedrofariasx/dockernativemanager/commit/4fef260c123fede4b5511cceb4441942a709b71a))
+
+# [1.17.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.1...v1.17.0-beta.2) (2026-10-05)
+
+
+### Bug Fixes
+
+* remove impure date creation from Images render path ([7132469](https://github.com/pedrofariasx/dockernativemanager/commit/7132469558d54f2a96f85be0ad89d187b0e7a994))
+
+## [1.16.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.1...v1.16.2) (2026-09-13)
+
+
+### Bug Fixes
+
+* resolve Monaco Editor 404 for loader.js.map by serving local assets ([a878073](https://github.com/pedrofariasx/dockernativemanager/commit/a8780735b386439d2df7531a3f2f7b139289255a))
+
+# [1.17.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.2-beta.1...v1.17.0-beta.1) (2026-09-25)
+
+
+### Features
+
+* add password authentication and auto-setup for remote contexts ([800e9ce](https://github.com/pedrofariasx/dockernativemanager/commit/800e9ce323e8c8f8685625c5e40854c6bd046910))
+
+## [1.16.2-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.1...v1.16.2-beta.1) (2026-09-13)
+
+
+### Bug Fixes
+
+* resolve Monaco Editor 404 for loader.js.map by serving local assets ([a878073](https://github.com/pedrofariasx/dockernativemanager/commit/a8780735b386439d2df7531a3f2f7b139289255a))
+
+## [1.16.1-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.1-beta.1...v1.16.1-beta.2) (2026-09-13)
+
+
+### Bug Fixes
+
+* resolve Monaco Editor 404 for loader.js.map by serving local assets ([a878073](https://github.com/pedrofariasx/dockernativemanager/commit/a8780735b386439d2df7531a3f2f7b139289255a))
+
+## [1.16.1-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.0...v1.16.1-beta.1) (2026-09-10)
+
+
+### Bug Fixes
+
+* **vite:** replace __dirname with import.meta.dirname ([f14c032](https://github.com/pedrofariasx/dockernativemanager/commit/f14c03291459bfd8a87a9c11ab670623d4fc05bd))
+
+
+### Performance Improvements
+
+* **vite:** substituir plugin react-swc por react ([ba54015](https://github.com/pedrofariasx/dockernativemanager/commit/ba54015692d8e5eeea71f654cd2a94ea8d75dff2))
+
+# [1.16.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.0-beta.1...v1.16.0-beta.2) (2026-09-10)
+
+
+### Bug Fixes
+
+* **vite:** replace __dirname with import.meta.dirname ([f14c032](https://github.com/pedrofariasx/dockernativemanager/commit/f14c03291459bfd8a87a9c11ab670623d4fc05bd))
+
+
+### Performance Improvements
+
+* **vite:** substituir plugin react-swc por react ([ba54015](https://github.com/pedrofariasx/dockernativemanager/commit/ba54015692d8e5eeea71f654cd2a94ea8d75dff2))
+
+# [1.16.0](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.2...v1.16.0) (2026-09-10)
+
+
+### Bug Fixes
+
+* **frontend:** resolve lint errors blocking CI frontend job ([18d3302](https://github.com/pedrofariasx/dockernativemanager/commit/18d3302d0bd4cee2e2d5fd6b239410782c99f4fa))
+* restore splash skeleton stylesheet ([e79e4ac](https://github.com/pedrofariasx/dockernativemanager/commit/e79e4ac43f2844e4e7ec769aa5bed34615c6bfad))
+
+
+### Features
+
+* atualiza bollard para ultima versão 0.21.x ([f194177](https://github.com/pedrofariasx/dockernativemanager/commit/f19417782fb96320505aed40bfeebd272ba07667))
+
+# [1.16.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.3...v1.16.0-beta.1) (2026-09-10)
+
+
+### Features
+
+* atualiza bollard para ultima versão 0.21.x ([f194177](https://github.com/pedrofariasx/dockernativemanager/commit/f19417782fb96320505aed40bfeebd272ba07667))
+
+## [1.15.1-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.2...v1.15.1-beta.3) (2026-09-10)
+
+
+### Bug Fixes
+
+* restore splash skeleton stylesheet ([e79e4ac](https://github.com/pedrofariasx/dockernativemanager/commit/e79e4ac43f2844e4e7ec769aa5bed34615c6bfad))
+
+## [1.15.1-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.1-beta.1...v1.15.1-beta.2) (2026-08-30)
+
+
+### Bug Fixes
+
+* **frontend:** resolve lint errors blocking CI frontend job ([18d3302](https://github.com/pedrofariasx/dockernativemanager/commit/18d3302d0bd4cee2e2d5fd6b239410782c99f4fa))
+
+## [1.15.1-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0...v1.15.1-beta.1) (2026-07-27)
+
+
+### Bug Fixes
+
+* mover CSS do skeleton para arquivo externo e isolar suas variáveis com --sk- ([0c25a6f](https://github.com/pedrofariasx/dockernativemanager/commit/0c25a6f7764aeb4ce2f8a376bb8b0cb139f4668d))
+
+# [1.15.0](https://github.com/pedrofariasx/dockernativemanager/compare/v1.14.0...v1.15.0) (2026-07-27)
+
+
+### Bug Fixes
+
+* ajustar layout e cores do skeleton e header dos botoes ([3691974](https://github.com/pedrofariasx/dockernativemanager/commit/3691974dd684d039e3d79730b756be8796f971d3))
+* aprimorar loading e alerta de daemon ([44bda3b](https://github.com/pedrofariasx/dockernativemanager/commit/44bda3b1220aff4b1dfdcd835e6ba9e9cf7a487e))
+* corrigir build da tela de carregamento removendo color-mix/backdrop-filter ([232b75c](https://github.com/pedrofariasx/dockernativemanager/commit/232b75c6a782046afa427c739e40fa5e7074903c))
+* corrigir exibição de created e size na aba de volumes ([cc83d4b](https://github.com/pedrofariasx/dockernativemanager/commit/cc83d4b9da183579d60a9446077b990bb6d18bd7))
+* corrigir todos os warnings do lint (28 warnings) ([aeb54df](https://github.com/pedrofariasx/dockernativemanager/commit/aeb54dfc5672fb7e60e022132919375ee561cf3f))
+* remover ícone ExternalLink duplicado no Sidebar ([c22a695](https://github.com/pedrofariasx/dockernativemanager/commit/c22a6954447cce005a4d8ac069de480ff5e9f514))
+
+
+### Features
+
+* migrate to TypeScript 7 and replace ESLint with oxlint ([418468f](https://github.com/pedrofariasx/dockernativemanager/commit/418468f839327ee12a620b300d68917562d0bf70))
+* tornar tiles do dashboard clicáveis e direcionar para a aba correta ([633227a](https://github.com/pedrofariasx/dockernativemanager/commit/633227ab3d19b0e11c84de7355a32ecf5013285d))
+
+# [1.15.0-beta.7](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0-beta.6...v1.15.0-beta.7) (2026-07-18)
+
+
+### Bug Fixes
+
+* ajustar layout e cores do skeleton e header dos botoes ([3691974](https://github.com/pedrofariasx/dockernativemanager/commit/3691974dd684d039e3d79730b756be8796f971d3))
+
+# [1.15.0-beta.6](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0-beta.5...v1.15.0-beta.6) (2026-07-18)
+
+
+### Bug Fixes
+
+* corrigir build da tela de carregamento removendo color-mix/backdrop-filter ([232b75c](https://github.com/pedrofariasx/dockernativemanager/commit/232b75c6a782046afa427c739e40fa5e7074903c))
+
+# [1.15.0-beta.5](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0-beta.4...v1.15.0-beta.5) (2026-07-18)
+
+
+### Bug Fixes
+
+* aprimorar loading e alerta de daemon ([44bda3b](https://github.com/pedrofariasx/dockernativemanager/commit/44bda3b1220aff4b1dfdcd835e6ba9e9cf7a487e))
+
+# [1.15.0-beta.4](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0-beta.3...v1.15.0-beta.4) (2026-07-18)
+
+
+### Features
+
+* tornar tiles do dashboard clicáveis e direcionar para a aba correta ([633227a](https://github.com/pedrofariasx/dockernativemanager/commit/633227ab3d19b0e11c84de7355a32ecf5013285d))
+
+# [1.15.0-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0-beta.2...v1.15.0-beta.3) (2026-07-18)
+
+
+### Bug Fixes
+
+* remover ícone ExternalLink duplicado no Sidebar ([c22a695](https://github.com/pedrofariasx/dockernativemanager/commit/c22a6954447cce005a4d8ac069de480ff5e9f514))
+
+# [1.15.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.15.0-beta.1...v1.15.0-beta.2) (2026-07-18)
+
+
+### Bug Fixes
+
+* corrigir exibição de created e size na aba de volumes ([cc83d4b](https://github.com/pedrofariasx/dockernativemanager/commit/cc83d4b9da183579d60a9446077b990bb6d18bd7))
+
+# [1.15.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.14.1-beta.1...v1.15.0-beta.1) (2026-07-18)
+
+
+### Features
+
+* migrate to TypeScript 7 and replace ESLint with oxlint ([418468f](https://github.com/pedrofariasx/dockernativemanager/commit/418468f839327ee12a620b300d68917562d0bf70))
+
+## [1.14.1-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.14.0...v1.14.1-beta.1) (2026-07-18)
+
+
+### Bug Fixes
+
+* corrigir todos os warnings do lint (28 warnings) ([aeb54df](https://github.com/pedrofariasx/dockernativemanager/commit/aeb54dfc5672fb7e60e022132919375ee561cf3f))
+
+# [1.14.0](https://github.com/pedrofariasx/dockernativemanager/compare/v1.13.1...v1.14.0) (2026-07-18)
+
+
+### Bug Fixes
+
+* substituir Github icon removido do lucide-react v1 ([fbf45cf](https://github.com/pedrofariasx/dockernativemanager/commit/fbf45cfd96f7ec33b74b424d2458e41b02612fcf))
+
+
+### Features
+
+* habilita selecao global do input text com Ctrl + A ([63f26cb](https://github.com/pedrofariasx/dockernativemanager/commit/63f26cb1393eab21050646c4e2f73f4e5d6dec42))
+* habilita selecao global do input text com Ctrl + A 2 ([303f1d5](https://github.com/pedrofariasx/dockernativemanager/commit/303f1d5d42a007949b222cdfffbadc1395be9352))
+
+# [1.14.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.14.0-beta.1...v1.14.0-beta.2) (2026-07-18)
+
+
+### Bug Fixes
+
+* substituir Github icon removido do lucide-react v1 ([fbf45cf](https://github.com/pedrofariasx/dockernativemanager/commit/fbf45cfd96f7ec33b74b424d2458e41b02612fcf))
+
+# [1.14.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.13.1-beta.1...v1.14.0-beta.1) (2026-07-18)
+
+
+### Features
+
+* habilita selecao global do input text com Ctrl + A ([63f26cb](https://github.com/pedrofariasx/dockernativemanager/commit/63f26cb1393eab21050646c4e2f73f4e5d6dec42))
+* habilita selecao global do input text com Ctrl + A 2 ([303f1d5](https://github.com/pedrofariasx/dockernativemanager/commit/303f1d5d42a007949b222cdfffbadc1395be9352))
+
+## [1.13.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.13.0...v1.13.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* reimplementar drag e duplo clique da titlebar via pointerdown ([1c1311a](https://github.com/pedrofariasx/dockernativemanager/commit/1c1311ab6d9a8cc55fc8c68cbdcd296e538c7ad7))
+
+## [1.13.1-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.13.0...v1.13.1-beta.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* reimplementar drag e duplo clique da titlebar via pointerdown ([1c1311a](https://github.com/pedrofariasx/dockernativemanager/commit/1c1311ab6d9a8cc55fc8c68cbdcd296e538c7ad7))
+
+# [1.13.0](https://github.com/pedrofariasx/dockernativemanager/compare/v1.12.0...v1.13.0) (2026-07-17)
+
+
+### Bug Fixes
+
+* adicionar @semantic-release/github e corrigir disparo do release build ([0fff974](https://github.com/pedrofariasx/dockernativemanager/commit/0fff97494260a2eaabd1c6c1669b4af6f0a8667f))
+* adicionar handles de redimensionamento programáticos para compatibilidade com Wayland ([53a9357](https://github.com/pedrofariasx/dockernativemanager/commit/53a935713dc83bf94a341a158943d526535e81a4))
+* aprovar build scripts do @swc/core e esbuild no pnpm 11 ([823e8b0](https://github.com/pedrofariasx/dockernativemanager/commit/823e8b0872139f8a9f1e2ede4d84199251ae5b89))
+* build do Tauri no mesmo workflow do semantic-release ([7eb1053](https://github.com/pedrofariasx/dockernativemanager/commit/7eb1053ee2e28a15b64ee46a683e3657187470dc))
+* mover onlyBuiltDependencies para pnpm-workspace.yaml ([2cac5b1](https://github.com/pedrofariasx/dockernativemanager/commit/2cac5b1e0ec92db76d5b76a35228d26d5551f121))
+* remover version fixa do pnpm/action-setup para usar packageManager do package.json ([8ec9403](https://github.com/pedrofariasx/dockernativemanager/commit/8ec9403215df8738292e4ab9e749c5857052fd9f))
+
+
+### Features
+
+* implementar semantic-release com branches main (stable) e dev (beta) ([e6dc0fa](https://github.com/pedrofariasx/dockernativemanager/commit/e6dc0fa4f623217a4d9852dc0114367104d5acca))
+
+# [1.12.0-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.12.0-beta.2...v1.12.0-beta.3) (2026-07-17)
+
+
+### Bug Fixes
+
+* build do Tauri no mesmo workflow do semantic-release ([7eb1053](https://github.com/pedrofariasx/dockernativemanager/commit/7eb1053ee2e28a15b64ee46a683e3657187470dc))
+
+# [1.12.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.12.0-beta.1...v1.12.0-beta.2) (2026-07-17)
+
+
+### Bug Fixes
+
+* adicionar @semantic-release/github e corrigir disparo do release build ([0fff974](https://github.com/pedrofariasx/dockernativemanager/commit/0fff97494260a2eaabd1c6c1669b4af6f0a8667f))
+
+# [1.12.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.11.0...v1.12.0-beta.1) (2026-07-17)
+
+
+### Bug Fixes
+
+* adicionar handles de redimensionamento programáticos para compatibilidade com Wayland ([53a9357](https://github.com/pedrofariasx/dockernativemanager/commit/53a935713dc83bf94a341a158943d526535e81a4))
+* ajusta lint para destravar o CI ([b70fb81](https://github.com/pedrofariasx/dockernativemanager/commit/b70fb81bbf5dbd50627b797b8993acd756e663a1))
+* aprovar build scripts do @swc/core e esbuild no pnpm 11 ([823e8b0](https://github.com/pedrofariasx/dockernativemanager/commit/823e8b0872139f8a9f1e2ede4d84199251ae5b89))
+* mover onlyBuiltDependencies para pnpm-workspace.yaml ([2cac5b1](https://github.com/pedrofariasx/dockernativemanager/commit/2cac5b1e0ec92db76d5b76a35228d26d5551f121))
+* remover version fixa do pnpm/action-setup para usar packageManager do package.json ([8ec9403](https://github.com/pedrofariasx/dockernativemanager/commit/8ec9403215df8738292e4ab9e749c5857052fd9f))
+* update resizable wrapper for v4 ([b22aed6](https://github.com/pedrofariasx/dockernativemanager/commit/b22aed6723273ee011130823060944b397da6050))
+
+
+### Features
+
+* implementar semantic-release com branches main (stable) e dev (beta) ([e6dc0fa](https://github.com/pedrofariasx/dockernativemanager/commit/e6dc0fa4f623217a4d9852dc0114367104d5acca))

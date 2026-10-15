@@ -1,0 +1,24 @@
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Thu, 15 Oct 2026 01:52:32 +0000
+Description: Docker Native Manager APT repository
+Label: Docker Native Manager
+Origin: Docker Native Manager
+Suite: stable
+MD5Sum:
+ 3db9db59da7da2b1fbc3c78ade0c8dd2              216 Release
+ 3094e72c3776033d51c1b1fce47fa9da             3385 main/binary-amd64/Packages
+ dbbbf06fa8328e5d9716326356430889             1239 main/binary-amd64/Packages.gz
+SHA1:
+ c31d42c1cdfd17612ce6e3778a5cd2c847c0a92e              216 Release
+ cbfcfdf054d96685eff9699a46899a2b1e6f3c20             3385 main/binary-amd64/Packages
+ 565bed4626cf8d5d08c9454fc6f5aa35c865c1a7             1239 main/binary-amd64/Packages.gz
+SHA256:
+ a2de1984f54c36bacd1553271e839a46c03ec16d7a0305b6e2db286800467787              216 Release
+ 5c785e17c11def0c2962bb9d8cc31cb8d59a04c55091f6df8f5b2436439f5133             3385 main/binary-amd64/Packages
+ 4d6576aa199098c3d81fb822d20f760efa99998007a7ddfc7e86e36d39b7624c             1239 main/binary-amd64/Packages.gz
+SHA512:
+ 371a18d029241ed29eeb1611c605c2593842868cfa8a6fcc1d638f1a05e12340dcc8301d9e7399bd64c5ccca739b6e43c04b2faa7089b388227028af99023f84              216 Release
+ 0b152c505e141a90eac372e01afdda86d78b65050c5c46c45276b971d045c1974d1e89007383ac64c82b457c83304296b4de961b806d3cb59b4c01f341947f8b             3385 main/binary-amd64/Packages
+ a876de4e14e71372e769b8022df347eeeac13ccdeeacdb7b20103c5029aceefa068497f408f33f85e014bd9be066972abab1da74fe6c73c09826b484fb5badf5             1239 main/binary-amd64/Packages.gz

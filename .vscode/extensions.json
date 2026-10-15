@@ -1,0 +1,12 @@
+{
+  "recommendations": [
+    "oxc.oxlint-vscode",
+    "esbenp.prettier-vscode",
+    "editorconfig.editorconfig",
+    "bradlc.vscode-tailwindcss",
+    "vitest.explorer",
+    "rust-lang.rust-analyzer",
+    "tamasfe.even-better-toml",
+    "vivaxy.vscode-conventional-commits"
+  ]
+}

@@ -1,0 +1,29 @@
+[package]
+name = "docker-native-manager"
+version = "1.17.0-beta.8"
+description = "A powerful, native, and cross-platform GUI for managing Docker environments, containers, and stacks."
+authors = ["Pedro Farias"]
+edition = "2021"
+
+[build-dependencies]
+tauri-build = { version = "2.1.0", features = [] }
+
+[dependencies]
+tauri = { version = "2.1.0", features = [] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bollard = { version = "0.21.1", features = ["chrono", "time"] }
+tokio = { version = "1", features = ["full"] }
+futures-util = "0.3"
+sysinfo = "0.39.5"
+chrono = { version = "0.4", features = ["serde"] }
+tauri-plugin-dialog = "2.6.0"
+tauri-plugin-fs = "2.4.5"
+uuid = { version = "1.7.0", features = ["v4"] }
+lazy_static = "1.5"
+base64 = "0.23"
+
+[features]
+# this feature is used for production builds or when `devPath` points to the filesystem
+# DO NOT REMOVE!!
+custom-protocol = ["tauri/custom-protocol"]
