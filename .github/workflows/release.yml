@@ -102,15 +102,11 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-    env:
-      GNUPGHOME: ${{ runner.temp }}/gnupg
-    steps:
-      - uses: actions/checkout@v7
-
       - name: Import APT signing key
         env:
           APT_GPG_PRIVATE_KEY: ${{ secrets.APT_GPG_PRIVATE_KEY }}
           APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
+          GNUPGHOME: ${{ runner.temp }}/gnupg
         run: |
           set -euo pipefail
           test -n "$APT_GPG_PRIVATE_KEY" || { echo "::error::secret APT_GPG_PRIVATE_KEY is not set"; exit 1; }
@@ -177,6 +173,7 @@ jobs:
           TAG: ${{ inputs.tag }}
           KEEP_VERSIONS: "5"
           APT_GPG_PASSPHRASE: ${{ secrets.APT_GPG_PASSPHRASE }}
+          GNUPGHOME: ${{ runner.temp }}/gnupg
         run: |
           set -euo pipefail
           # o Tauri nomeia o .deb como "<productName>_<versão>_<arch>.deb"
