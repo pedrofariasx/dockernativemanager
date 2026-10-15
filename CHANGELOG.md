@@ -1,3 +1,10 @@
+# [1.17.0-beta.6](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.5...v1.17.0-beta.6) (2026-10-15)
+
+
+### Bug Fixes
+
+* restore apt-repo job structure broken by misplaced env block ([b23eb30](https://github.com/pedrofariasx/dockernativemanager/commit/b23eb3079bd372438116fe975eea677b3b82e28d))
+
 # [1.17.0-beta.5](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.4...v1.17.0-beta.5) (2026-10-15)
 
 
