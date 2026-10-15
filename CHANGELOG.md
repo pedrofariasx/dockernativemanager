@@ -1,3 +1,10 @@
+# [1.17.0-beta.8](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.7...v1.17.0-beta.8) (2026-10-15)
+
+
+### Bug Fixes
+
+* include install.sh in the dry-run repository preview ([ff6a494](https://github.com/pedrofariasx/dockernativemanager/commit/ff6a494e87d9524a105c57ff84caa4c8f92f573f))
+
 # [1.17.0-beta.7](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.6...v1.17.0-beta.7) (2026-10-15)
 
 
