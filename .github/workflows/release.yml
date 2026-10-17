@@ -52,12 +52,23 @@ jobs:
       - name: Build Tauri App
         run: pnpm tauri build --bundles appimage,deb,rpm
 
-      - name: Upload AppImage, deb, rpm to Release
+      - name: Upload raw Linux binary, AppImage, deb, and rpm to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ inputs.tag }}"
           BUNDLE_DIR="src-tauri/target/release/bundle"
+          BIN_PATH="src-tauri/target/release/docker-native-manager"
+
+          if [ ! -f "$BIN_PATH" ]; then
+            echo "Expected binary not found at $BIN_PATH"
+            exit 1
+          fi
+
+          # Upload the raw Linux binary as a separate release asset.
+          gh release upload "$TAG" \
+            "$BIN_PATH#docker-native-manager-linux-x86_64" \
+            --clobber
 
           for dir in appimage deb rpm; do
             for f in "$BUNDLE_DIR/$dir/"*; do
@@ -92,6 +103,7 @@ jobs:
     name: Publish APT repository (gh-pages)
     needs: build
     runs-on: ubuntu-22.04
+
     steps:
       - uses: actions/checkout@v7
 
@@ -102,37 +114,51 @@ jobs:
           GNUPGHOME: ${{ runner.temp }}/gnupg
         run: |
           set -euo pipefail
-          test -n "$APT_GPG_PRIVATE_KEY" || { echo "::error::secret APT_GPG_PRIVATE_KEY is not set"; exit 1; }
-          # home dedicado evita depender das permissões do ~/.gnupg do runner
+
+          test -n "$APT_GPG_PRIVATE_KEY" || {
+            echo "::error::secret APT_GPG_PRIVATE_KEY is not set"
+            exit 1
+          }
+
           mkdir -p "$GNUPGHOME"
           chmod 700 "$GNUPGHOME"
+
           echo "$APT_GPG_PRIVATE_KEY" | gpg --batch --import
-          # permite assinar sem interação em runners headless
-          gpg --list-secret-keys --with-colons | awk -F: '/^fpr/{print $10":6:"}' \
+
+          gpg --list-secret-keys --with-colons \
+            | awk -F: '/^fpr/{print $10":6:"}' \
             | gpg --batch --import-ownertrust
 
-          # valida já aqui se a chave assina sem interação, para falhar com
-          # mensagem acionável em vez do erro obscuro do gpg mais adiante
           GPG_SIGN=(gpg --batch --yes)
+
           if [ -n "${APT_GPG_PASSPHRASE:-}" ]; then
-            # com passphrase, loopback é obrigatório: sem tty no runner o
-            # pinentry falha com "Inappropriate ioctl for device"
-            GPG_SIGN+=(--pinentry-mode loopback --passphrase "$APT_GPG_PASSPHRASE")
+            GPG_SIGN+=(
+              --pinentry-mode loopback
+              --passphrase "$APT_GPG_PASSPHRASE"
+            )
             echo "assinando via loopback (chave com passphrase)"
           else
             echo "assinando sem passphrase"
           fi
+
           TESTFILE="$(mktemp)"
           echo "teste" > "$TESTFILE"
-          if ! "${GPG_SIGN[@]}" -o "$TESTFILE.sig" --detach-sign "$TESTFILE" 2>/dev/null \
-             || [ ! -s "$TESTFILE.sig" ]; then
+
+          if ! "${GPG_SIGN[@]}" \
+              -o "$TESTFILE.sig" \
+              --detach-sign "$TESTFILE" 2>/dev/null \
+              || [ ! -s "$TESTFILE.sig" ]; then
             rm -f "$TESTFILE" "$TESTFILE.sig"
+
             echo "::error::a chave não conseguiu assinar sem interação."
             echo "::error::Se a chave GPG tem passphrase, crie o secret APT_GPG_PASSPHRASE com a senha dela."
+
             rm -rf "$GNUPGHOME"
             exit 1
           fi
+
           rm -f "$TESTFILE" "$TESTFILE.sig"
+
           echo "chave importada e validada para assinatura"
 
       - name: Download last released .deb packages
@@ -141,12 +167,14 @@ jobs:
           KEEP_VERSIONS: "5"
         run: |
           set -euo pipefail
-          REPO="${{ github.repository }}"
-          rm -rf deb-out && mkdir -p deb-out
 
-          # A branch gh-pages é reconstruída do zero a cada publish, então o estado
-          # dela não importa: a fonte da verdade são as releases do GitHub.
-          # Pegamos as N releases mais novas que tenham um .deb amd64.
+          REPO="${{ github.repository }}"
+
+          rm -rf deb-out
+          mkdir -p deb-out
+
+          # A branch gh-pages é reconstruída do zero a cada publish.
+          # A fonte da verdade são as releases do GitHub.
           gh api "repos/$REPO/releases?per_page=50" --paginate \
             -q '.[]
                 | select(.draft == false)
@@ -161,23 +189,37 @@ jobs:
           fi
 
           COUNT=0
+
           while IFS= read -r tag; do
             [ "$COUNT" -ge "$KEEP_VERSIONS" ] && break
+
             echo "baixando $tag"
-            gh release download "$tag" --repo "$REPO" --dir deb-out --clobber \
+
+            gh release download "$tag" \
+              --repo "$REPO" \
+              --dir deb-out \
+              --clobber \
               --pattern '*_amd64.deb'
+
             COUNT=$((COUNT + 1))
           done < tags.txt
 
-          if [ "$COUNT" -eq 0 ] || [ -z "$(find deb-out -name '*.deb' -print -quit)" ]; then
+          if [ "$COUNT" -eq 0 ] \
+            || [ -z "$(find deb-out -name '*.deb' -print -quit)" ]; then
             echo "::error::nenhum .deb foi baixado das releases"
             exit 1
           fi
+
           echo "$COUNT release(s) no pool:"
           find deb-out -name '*.deb' -printf '  %f\n' | sort
 
       - name: Install repository tools
-        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends apt-utils dpkg-dev gnupg
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            apt-utils \
+            dpkg-dev \
+            gnupg
 
       - name: Keep install.sh before resetting the branch
         run: |
@@ -187,13 +229,11 @@ jobs:
       - name: Start a fresh gh-pages branch
         run: |
           set -euo pipefail
-          # O repositório é remontado do zero: sem histórico, a branch não cresce
-          # ~9 MB por release. Só o estado atual importa para um repo APT.
-          # É preciso remover a branch antes: --orphan falha se ela já existir e,
-          # quando roda em um repo onde ela existe, acaba herdando o HEAD anterior.
+
           git checkout --detach
           git branch -D gh-pages 2>/dev/null || true
           git checkout --orphan gh-pages
+
           echo "branch gh-pages limpa (sem estado anterior)"
 
       - name: Regenerate repository from pool
@@ -204,37 +244,50 @@ jobs:
           GNUPGHOME: ${{ runner.temp }}/gnupg
         run: |
           set -euo pipefail
-          # o Tauri nomeia o .deb como "<productName>_<versão>_<arch>.deb"
-          # ("Docker Native Manager_1.17.0_amd64.deb"), então globs por
-          # "docker-native-manager_*" não casam: usamos qualquer *.deb do pool.
+
           shopt -s nullglob
+
           GPG_SIGN=(gpg --batch --yes)
+
           if [ -n "${APT_GPG_PASSPHRASE:-}" ]; then
-            GPG_SIGN+=(--pinentry-mode loopback --passphrase "$APT_GPG_PASSPHRASE")
+            GPG_SIGN+=(
+              --pinentry-mode loopback
+              --passphrase "$APT_GPG_PASSPHRASE"
+            )
           fi
 
-          mkdir -p pool deb-out dists/stable/main/binary-amd64
+          mkdir -p \
+            pool \
+            deb-out \
+            dists/stable/main/binary-amd64
+
           cp -f deb-out/*.deb pool/
 
-          # mantém apenas as N versões mais recentes (limite de 1 GB do GitHub Pages).
-          # a ordenação usa a versão real do campo control (a que o apt considera),
-          # não o nome do arquivo, para não podar o pacote errado.
+          # Mantém apenas as N versões mais recentes.
           mapfile -t POOL < <(
             for deb in pool/*.deb; do
-              printf '%s\t%s\n' "$(dpkg-deb -f "$deb" Version)" "$deb"
+              printf '%s\t%s\n' \
+                "$(dpkg-deb -f "$deb" Version)" \
+                "$deb"
             done | sort -V -r
           )
-          if [ "${#POOL[@]}" -eq 0 ]; then
-            echo "::error::nenhum .deb no pool"; exit 1
-          fi
-          echo "no pool: ${#POOL[@]} versão(ões); mantendo as $KEEP_VERSIONS mais recentes"
-          printf '%s\n' "${POOL[@]:KEEP_VERSIONS}" | cut -f2 | xargs -r rm -f
 
-          apt-ftparchive packages pool > dists/stable/main/binary-amd64/Packages
+          if [ "${#POOL[@]}" -eq 0 ]; then
+            echo "::error::nenhum .deb no pool"
+            exit 1
+          fi
+
+          echo "no pool: ${#POOL[@]} versão(ões); mantendo as $KEEP_VERSIONS mais recentes"
+
+          printf '%s\n' "${POOL[@]:KEEP_VERSIONS}" \
+            | cut -f2 \
+            | xargs -r rm -f
+
+          apt-ftparchive packages pool \
+            > dists/stable/main/binary-amd64/Packages
+
           gzip -kf dists/stable/main/binary-amd64/Packages
 
-          # ATENÇÃO: os caminhos no Release precisam ser relativos a dists/stable,
-          # caso contrário o apt ignora o índice silenciosamente.
           apt-ftparchive \
             -o APT::FTPArchive::Release::Origin="Docker Native Manager" \
             -o APT::FTPArchive::Release::Label="Docker Native Manager" \
@@ -243,17 +296,26 @@ jobs:
             -o APT::FTPArchive::Release::Architectures="amd64" \
             -o APT::FTPArchive::Release::Components="main" \
             -o APT::FTPArchive::Release::Description="Docker Native Manager APT repository" \
-            release dists/stable > dists/stable/Release
+            release dists/stable \
+            > dists/stable/Release
 
-          # sem tty no runner o pinentry falha com "Inappropriate ioctl for device",
-          # então com passphrase usamos loopback. Sem passphrase, gpg direto:
-          # loopback sem --passphrase faz o gpg travar pedindo entrada em batchmode.
-          "${GPG_SIGN[@]}" --clearsign -o dists/stable/InRelease dists/stable/Release
-          "${GPG_SIGN[@]}" -abs -o dists/stable/Release.gpg dists/stable/Release
+          "${GPG_SIGN[@]}" \
+            --clearsign \
+            -o dists/stable/InRelease \
+            dists/stable/Release
+
+          "${GPG_SIGN[@]}" \
+            -abs \
+            -o dists/stable/Release.gpg \
+            dists/stable/Release
+
           gpg --armor --export > pubkey.asc
+
           printf 'nojekyll\n' > .nojekyll
-          # precisa ser copiado antes do checkout do gh-pages, que some com o source
-          install -m 0755 "${RUNNER_TEMP:-/tmp}/install.sh" install.sh
+
+          install -m 0755 \
+            "${RUNNER_TEMP:-/tmp}/install.sh" \
+            install.sh
 
           cat > index.html <<'HTML'
           <!doctype html>
@@ -262,20 +324,56 @@ jobs:
               <meta charset="utf-8">
               <title>Docker Native Manager - APT</title>
               <style>
-                body { font-family: system-ui, sans-serif; max-width: 46rem; margin: 4rem auto; padding: 0 1rem; line-height: 1.6; }
-                code, pre { background: #f4f4f5; border-radius: 6px; }
-                pre { padding: 1rem; overflow-x: auto; }
-                code { padding: 0.15rem 0.35rem; font-size: 0.9em; }
-                pre code { background: none; padding: 0; }
-                a { color: #2563eb; }
+                body {
+                  font-family: system-ui, sans-serif;
+                  max-width: 46rem;
+                  margin: 4rem auto;
+                  padding: 0 1rem;
+                  line-height: 1.6;
+                }
+
+                code,
+                pre {
+                  background: #f4f4f5;
+                  border-radius: 6px;
+                }
+
+                pre {
+                  padding: 1rem;
+                  overflow-x: auto;
+                }
+
+                code {
+                  padding: 0.15rem 0.35rem;
+                  font-size: 0.9em;
+                }
+
+                pre code {
+                  background: none;
+                  padding: 0;
+                }
+
+                a {
+                  color: #2563eb;
+                }
               </style>
             </head>
+
             <body>
               <h1>Docker Native Manager</h1>
-              <p>Repositório APT para instalar o Docker Native Manager em distribuições baseadas em Debian/Ubuntu (Ubuntu 22.04+, Debian 12+).</p>
+
+              <p>
+                Repositório APT para instalar o Docker Native Manager
+                em distribuições baseadas em Debian/Ubuntu
+                (Ubuntu 22.04+, Debian 12+).
+              </p>
+
               <h2>Instalação</h2>
+
               <pre><code>curl -fsSL https://pedrofariasx.github.io/dockernativemanager/install.sh | sudo bash</code></pre>
+
               <h2>Ou manualmente</h2>
+
               <pre><code>curl -fsSL https://pedrofariasx.github.io/dockernativemanager/pubkey.asc \
                 | sudo gpg --dearmor -o /usr/share/keyrings/dockernativemanager.gpg
 
@@ -284,7 +382,12 @@ jobs:
 
                 sudo apt update
                 sudo apt install docker-native-manager</code></pre>
-              <p><a href="https://github.com/pedrofariasx/dockernativemanager">Código-fonte e issues no GitHub</a></p>
+
+              <p>
+                <a href="https://github.com/pedrofariasx/dockernativemanager">
+                  Código-fonte e issues no GitHub
+                </a>
+              </p>
             </body>
           </html>
           HTML
@@ -295,16 +398,28 @@ jobs:
           TAG: ${{ inputs.tag }}
         run: |
           set -euo pipefail
+
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          # deb-out e tags.txt são locais, não vão para o Pages
-          git add -A -- . ':(exclude)deb-out' ':(exclude)tags.txt'
-          git diff --cached --quiet && { echo "Nada a publicar"; exit 0; }
+
+          # deb-out e tags.txt são locais e não vão para o Pages.
+          git add -A -- \
+            . \
+            ':(exclude)deb-out' \
+            ':(exclude)tags.txt'
+
+          git diff --cached --quiet && {
+            echo "Nada a publicar"
+            exit 0
+          }
+
           git commit -m "apt repo: $TAG"
-          # a branch é reconstruída do zero, então o push é forçado.
-          # só este workflow escreve nela, por isso é seguro.
+
+          # A branch é reconstruída do zero, então o push é forçado.
           git push --force origin gh-pages
-          echo "Repositório publicado em https://pedrofariasx.github.io/dockernativemanager" >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
+
+          echo "Repositório publicado em https://pedrofariasx.github.io/dockernativemanager" \
+            >> "${GITHUB_STEP_SUMMARY:-/dev/null}"
 
       - name: Ensure GitHub Pages is enabled
         if: ${{ inputs.apt_repo_mode == 'publish' }}
@@ -312,13 +427,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          # o GITHUB_TOKEN não pode criar o site do Pages (403), então se ainda não
-          # existir apenas avisamos: é um passo manual de uma única vez.
+
+          # O GITHUB_TOKEN pode não conseguir criar o site do Pages.
           if gh api "repos/${{ github.repository }}/pages" >/dev/null 2>&1; then
             echo "GitHub Pages já habilitado em gh-pages"
+
           elif gh api -X POST "repos/${{ github.repository }}/pages" \
-               -f "source[branch]=gh-pages" -f "source[path]=/" >/dev/null 2>&1; then
+              -f "source[branch]=gh-pages" \
+              -f "source[path]=/" >/dev/null 2>&1; then
             echo "GitHub Pages habilitado na branch gh-pages"
+
           else
             echo "::warning::Habilite o GitHub Pages manualmente:"
             echo "::warning::Settings → Pages → Source: Deploy from a branch → gh-pages / (root)"
