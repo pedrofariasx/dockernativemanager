@@ -1,3 +1,10 @@
+# [1.17.0-beta.9](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.8...v1.17.0-beta.9) (2026-10-19)
+
+
+### Bug Fixes
+
+* align tauri plugin fs versions across rust and npm ([e9f6bd6](https://github.com/pedrofariasx/dockernativemanager/commit/e9f6bd6008d8e7c653ac058e46f9363ca300e961))
+
 # [1.17.0-beta.8](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.7...v1.17.0-beta.8) (2026-10-15)
 
 
