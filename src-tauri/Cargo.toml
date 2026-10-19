@@ -18,7 +18,7 @@ futures-util = "0.3"
 sysinfo = "0.39.5"
 chrono = { version = "0.4", features = ["serde"] }
 tauri-plugin-dialog = "2.6.0"
-tauri-plugin-fs = "2.4.5"
+tauri-plugin-fs = "2.7.1"
 uuid = { version = "1.7.0", features = ["v4"] }
 lazy_static = "1.5"
 base64 = "0.23"
