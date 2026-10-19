@@ -444,7 +444,7 @@ jobs:
 
       - name: Upload repository as artifact (dry-run)
         if: ${{ inputs.apt_repo_mode != 'publish' }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: apt-repo-preview
           path: |
