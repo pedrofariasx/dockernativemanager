@@ -199,6 +199,28 @@ const Stacks = () => {
   const [scaleValue, setScaleValue] = useState(1);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: "asc" | "desc" } | null>(null);
 
+  // O Monaco mede a largura dos caracteres com a fonte no momento da montagem.
+  // Se a webfont ainda não carregou, a grade do editor fica desalinhada, então
+  // esperamos a fonte ficar disponível antes de renderizar.
+  const [editorFontReady, setEditorFontReady] = useState(false);
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        if (typeof document !== "undefined" && document.fonts) {
+          await document.fonts.load('12px "JetBrains Mono"');
+        }
+      } catch {
+        // sem Font Loading API: seguimos com a fonte de fallback
+      }
+      if (!cancelled) setEditorFontReady(true);
+    };
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   const handleRefresh = async () => {
     setIsRefreshing(true);
     await refreshStacks();
@@ -1395,26 +1417,33 @@ const Stacks = () => {
             <div className="space-y-2">
               <Label htmlFor="compose">docker-compose.yaml</Label>
               <div className="rounded-md border border-border overflow-hidden">
-                <Editor
-                  height="400px"
-                  defaultLanguage="yaml"
-                  theme="vs-dark"
-                  value={composeContent}
-                  onChange={(value) => setComposeContent(value || "")}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 12,
-                    lineNumbers: "on",
-                    scrollBeyondLastLine: false,
-                    automaticLayout: true,
-                    tabSize: 2,
-                    formatOnPaste: true,
-                    formatOnType: true,
-                    wordWrap: "on",
-                    readOnly: isDeploying,
-                    padding: { top: 10, bottom: 10 },
-                  }}
-                />
+                {editorFontReady ? (
+                  <Editor
+                    height="400px"
+                    defaultLanguage="yaml"
+                    theme="vs-dark"
+                    value={composeContent}
+                    onChange={(value) => setComposeContent(value || "")}
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 12,
+                      fontFamily: '"JetBrains Mono", monospace',
+                      lineNumbers: "on",
+                      scrollBeyondLastLine: false,
+                      automaticLayout: true,
+                      tabSize: 2,
+                      formatOnPaste: true,
+                      formatOnType: true,
+                      wordWrap: "on",
+                      readOnly: isDeploying,
+                      padding: { top: 10, bottom: 10 },
+                    }}
+                  />
+                ) : (
+                  <div className="flex h-[400px] items-center justify-center text-xs text-muted-foreground">
+                    Carregando editor…
+                  </div>
+                )}
               </div>
             </div>
 
