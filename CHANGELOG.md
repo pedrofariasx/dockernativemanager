@@ -1,3 +1,10 @@
+# [1.17.0-beta.10](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.9...v1.17.0-beta.10) (2026-10-21)
+
+
+### Features
+
+* bundle Plus Jakarta Sans and JetBrains Mono as the app typography ([ba911e8](https://github.com/pedrofariasx/dockernativemanager/commit/ba911e8e80d3ccb12c188f8f14bc86abd4da624d))
+
 # [1.17.0-beta.9](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.8...v1.17.0-beta.9) (2026-10-19)
 
 
