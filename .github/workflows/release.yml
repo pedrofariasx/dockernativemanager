@@ -84,7 +84,11 @@ jobs:
 
           for dir in appimage deb rpm; do
             for f in "$BUNDLE_DIR/$dir/"*; do
-              [ -f "$f" ] && gh release upload "$TAG" "$f" --clobber
+              # o glob não casa quando o diretório não existe (rpm não é gerado
+              # em prerelease). Com `bash -e`, um teste falso abortaria o passo.
+              if [ -f "$f" ]; then
+                gh release upload "$TAG" "$f" --clobber
+              fi
             done
           done
 
