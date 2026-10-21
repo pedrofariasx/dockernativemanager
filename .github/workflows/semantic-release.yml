@@ -87,7 +87,19 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build Tauri App
-        run: pnpm tauri build --bundles appimage,deb,rpm
+        run: |
+          set -euo pipefail
+          VERSION="$(python3 -c "import json;print(json.load(open('src-tauri/tauri.conf.json'))['version'])")"
+          # O formato RPM não aceita hífen na versão (é o separador do NEVRA), então
+          # versões prerelease como 1.17.0-beta.10 não podem virar RPM. Geramos
+          # apenas appimage e deb nelas; o rpm fica para as versões estáveis.
+          if [[ "$VERSION" == *-* ]]; then
+            echo "versão $VERSION é prerelease: gerando appimage e deb (sem rpm)"
+            pnpm tauri build --bundles appimage,deb
+          else
+            echo "versão $VERSION é estável: gerando appimage, deb e rpm"
+            pnpm tauri build --bundles appimage,deb,rpm
+          fi
 
       - name: Upload AppImage, deb, rpm to Release
         env:
