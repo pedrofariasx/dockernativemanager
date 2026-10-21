@@ -1,3 +1,10 @@
+# [1.17.0-beta.12](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.11...v1.17.0-beta.12) (2026-10-21)
+
+
+### Bug Fixes
+
+* do not fail the upload step when a bundle format is missing ([f47a421](https://github.com/pedrofariasx/dockernativemanager/commit/f47a421d9c5189eb41af933021332cd65f6ae6e9))
+
 # [1.17.0-beta.11](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.10...v1.17.0-beta.11) (2026-10-21)
 
 
