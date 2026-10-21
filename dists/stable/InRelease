@@ -1,0 +1,43 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Architectures: amd64
+Codename: stable
+Components: main
+Date: Wed, 21 Oct 2026 23:20:34 +0000
+Description: Docker Native Manager APT repository
+Label: Docker Native Manager
+Origin: Docker Native Manager
+Suite: stable
+MD5Sum:
+ 08d0908e7daa80913f55c1d8ed658bac              216 Release
+ 8ea29f96196b200bf399a8ac21fed2e3             3389 main/binary-amd64/Packages
+ c9af85250b30871153cbd6735e0051aa             1245 main/binary-amd64/Packages.gz
+SHA1:
+ 4857054cfb2c45cf73d0a9b68efff987d339991c              216 Release
+ e70f47ee34002aa62b8c54281586c9c21a62d4fa             3389 main/binary-amd64/Packages
+ 671e6fbf8f48e2d76e8441732f80e20d7cce6bde             1245 main/binary-amd64/Packages.gz
+SHA256:
+ 6e3683c9a70153f504e5678b62f33b4505c6096953f425edea6a78002f2aa50e              216 Release
+ acb904096d7f4fb3c5cd62442d16f0f8c9ede61aeb54ac752e2d0a9c6d10697b             3389 main/binary-amd64/Packages
+ c0c8e9ebbbeb48760943b5cd47ab99dfe9c18b5a900c305ec46338a3f6074687             1245 main/binary-amd64/Packages.gz
+SHA512:
+ 9054a7ff569f5ebdceebdbd522c56e01f41ad3e6d6d4f3d4dad8a09ba7c331351c1de12ce7d130e07b39d197b34df5af8830a2e66faf0faa31791783548b1469              216 Release
+ aa465c48b231e0e1aef7ab4ba2f3e74f436dc9c66c57b3db2dac9c1de72631a281102a30cb7af6dfbffaef226183128357ee58e84c5fbea0f29f7006ae827a91             3389 main/binary-amd64/Packages
+ 0c9ebd1a7f633c162a10b862ba850e1a0db5161bbe6bd4075be11b6b66e28245dc153d0fc609be0fafa4a23fc4be973defb31e04a96b7a93a709adceafc42256             1245 main/binary-amd64/Packages.gz
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEEiLUxLk4m2jesPwIYSZE8jWArScwFAmrZSMIACgkQSZE8jWAr
+Scy6HBAAk9NCBKtFnnM1U7RCzLMYf0BPLL2wiwOT6srJdWwEN8eV7JcId/5wvQuo
+GDYWkVq1MxSJYyBtKi/PZBdqpwbP8htVIpdi2Bf+UtGVwb2s/YWw5Vq2aFMHybFp
+IjaXQ4+iLpbdnL8P29sSH4tEgeK8xba72i55eoqUq8+FWeC6o8VDE8d11FRjIuAC
+SWU05VeKz+oDxXcjapBQK7KeQVHuRwUzeM8UqgGwm9FM58SFijPXmKYDQ4BQtaVy
+djwfD8FtJP9tperR8CFQmuadLwAROnHPraODelr4u92WFPMJwGjW83MmttuqO2Hq
+OpXDXEPx0MCXp5tQ62tOYMEVdgzFNETCSmbfrOe2A3Pw+D6t2q72t+7lYj3u2b/r
+I8GgziPHs+cjexzXXyBMsDEFcvypzGxDkrmPexdRZxjsUOkbqik4IMIa1vx8u1QQ
+qtgNifThEzciWA6ckYK91zk1/DsJqhS2c10alPVBBXQRyYKPjOxAHL3/x5z1OhJP
+Zy8BVXMrRX+aEwJJtNXCjVxQOpSl0fNS8zuNpRn2lcjSaEUCheVo+LakCrHee++k
+HIOA7xcZloE4ZQqHWRcYL8MNdKaMYmBqRk4aAVH0wU6qxX3tQT90APsjWJ+A+XAV
+LFE4eRIT/d9YZv6H798UixIScCjzy7wyeBECQNnsLMy6/RuL40Q=
+=PUg4
+-----END PGP SIGNATURE-----

@@ -1,0 +1,8 @@
+dist
+node_modules
+src-tauri/target
+CHANGELOG.md
+pnpm-lock.yaml
+*.svg
+*.png
+*.ico

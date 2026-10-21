@@ -1,0 +1,80 @@
+Package: docker-native-manager
+Architecture: amd64
+Version: 1.17.0-beta.11
+Priority: optional
+Maintainer: Pedro Farias
+Installed-Size: 25010
+Depends: libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: pool/Docker.Native.Manager_1.17.0-beta.11_amd64.deb
+Size: 9893878
+MD5sum: 005f9b6fd991cc2547b47b5ddbc08f22
+SHA1: d7e28683b3bc1f675ffc3be583e705cb378d6767
+SHA256: 23134122900869c5db277edaf1947d3d1e27e6d9835ff0a3365bf7bf14da2551
+SHA512: 849a934710351dc64234f9e90ce1c4d52d6e9af83028ef8f06a61df0e9c108de1d05cf9f98a63403a92ee8b0166f4d05e5c495b15e9540ffbe8a551351aed3e6
+Description: A powerful, native, and cross-platform GUI for managing Docker environments, containers, and stacks.
+ (none)
+
+Package: docker-native-manager
+Architecture: amd64
+Version: 1.17.0-beta.12
+Priority: optional
+Maintainer: Pedro Farias
+Installed-Size: 25008
+Depends: libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: pool/Docker.Native.Manager_1.17.0-beta.12_amd64.deb
+Size: 9893758
+MD5sum: d5d2d89c1bb4cecd491d272061cee03b
+SHA1: 63cafcb531beb5359a233a23d7c7e0de3ac07858
+SHA256: 83ca2808a85d9900cd4cc246adb79dac4cb7bb2f9e1d9d0a3acde582e060c4f9
+SHA512: 1a5cc492caba77a812cc65620549d096c333057253a997987a6c8fb0072fdcad1542fa8377780c8ab73665b094e5972ea579dcb54b300ba90c423d1ac7c21ec8
+Description: A powerful, native, and cross-platform GUI for managing Docker environments, containers, and stacks.
+ (none)
+
+Package: docker-native-manager
+Architecture: amd64
+Version: 1.17.0-beta.6
+Priority: optional
+Maintainer: Pedro Farias
+Installed-Size: 24873
+Depends: libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: pool/Docker.Native.Manager_1.17.0-beta.6_amd64.deb
+Size: 9750160
+MD5sum: e3d51585c5dc0aa12cdbbd0869d7349b
+SHA1: 8498a8264a8f3752acba58fc3f0259ec2b471067
+SHA256: 46a40e32a6da86e116b761b2326c0febc91357d138fb3a4badb901b23d78fe4e
+SHA512: 4b6f28ff125574bb13ae95bdc4bb2f895cb98f2055122952e01d3d25e2fda5607a7974828663ad765a392bde40d4c126d9e8f0acd1ea8bb930f078ae3bd29589
+Description: A powerful, native, and cross-platform GUI for managing Docker environments, containers, and stacks.
+ (none)
+
+Package: docker-native-manager
+Architecture: amd64
+Version: 1.17.0-beta.7
+Priority: optional
+Maintainer: Pedro Farias
+Installed-Size: 24872
+Depends: libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: pool/Docker.Native.Manager_1.17.0-beta.7_amd64.deb
+Size: 9750534
+MD5sum: a681afa424af8ba4e7214a04aa657945
+SHA1: 4f2bfc837340f2a583c7da84bc893082c498ad26
+SHA256: 55f2290f5442ac248a245bb5c01044f3298f756f8ad8822f29fbf5238a496155
+SHA512: 248d0ba40e2838fb1efb32b952f72defb421b06c217236d197dd9dc9e60f4f4496e0650d75139049d51da27a6c36345dcb60c54ec1bb16e18992ee5e11a5382d
+Description: A powerful, native, and cross-platform GUI for managing Docker environments, containers, and stacks.
+ (none)
+
+Package: docker-native-manager
+Architecture: amd64
+Version: 1.17.0-beta.8
+Priority: optional
+Maintainer: Pedro Farias
+Installed-Size: 24873
+Depends: libwebkit2gtk-4.1-0, libgtk-3-0
+Filename: pool/Docker.Native.Manager_1.17.0-beta.8_amd64.deb
+Size: 9750828
+MD5sum: e79cb1a014e1b6f844aec15deb2e7ad8
+SHA1: 0367ed75aa78d4b68611383fc5f385045dbec098
+SHA256: 7c492a4f2aa1b7cc38f63aa3af75a84a92a40ff5758d747c7112fd1807e36d23
+SHA512: bc4ff9b1bb12dba76bb72e124a59d9d18afc79da382a9c8b35d330087f9e5747fb0a55e568f2e30a93b8eb2e0a6e3611c6cb90b269c9d2f31c53e19c117019cc
+Description: A powerful, native, and cross-platform GUI for managing Docker environments, containers, and stacks.
+ (none)
+
