@@ -1,3 +1,10 @@
+# [1.17.0-beta.11](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.10...v1.17.0-beta.11) (2026-10-21)
+
+
+### Bug Fixes
+
+* do not build rpm for prerelease versions ([5536b50](https://github.com/pedrofariasx/dockernativemanager/commit/5536b509aa2966f5dc08d4a704ea36a0853a436f))
+
 # [1.17.0-beta.10](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.9...v1.17.0-beta.10) (2026-10-21)
 
 
