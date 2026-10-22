@@ -52,17 +52,36 @@ jobs:
       - name: Build Tauri App
         run: |
           set -euo pipefail
-          VERSION="$(python3 -c "import json;print(json.load(open('src-tauri/tauri.conf.json'))['version'])")"
-          # O formato RPM não aceita hífen na versão (é o separador do NEVRA), então
-          # versões prerelease como 1.17.0-beta.10 não podem virar RPM. Geramos
-          # apenas appimage e deb nelas; o rpm fica para as versões estáveis.
-          if [[ "$VERSION" == *-* ]]; then
-            echo "versão $VERSION é prerelease: gerando appimage e deb (sem rpm)"
-            pnpm tauri build --bundles appimage,deb
-          else
-            echo "versão $VERSION é estável: gerando appimage, deb e rpm"
-            pnpm tauri build --bundles appimage,deb,rpm
+          TAG="${{ inputs.tag }}"
+          TAURI_CONF="src-tauri/tauri.conf.json"
+          ORIGINAL_VERSION="$(python3 -c "import json;print(json.load(open('$TAURI_CONF'))['version'])")"
+          NORMALIZED_VERSION="${ORIGINAL_VERSION//-/_}"
+          TAG_VERSION="${TAG#v}"
+
+          echo "Release tag: $TAG"
+          echo "Tauri version (original): $ORIGINAL_VERSION"
+          echo "Tauri version (build): $NORMALIZED_VERSION"
+
+          if [[ "$TAG_VERSION" != "$ORIGINAL_VERSION" ]]; then
+            echo "::warning::tag version ($TAG_VERSION) differs from tauri.conf version ($ORIGINAL_VERSION)"
           fi
+
+          if [[ "$NORMALIZED_VERSION" != "$ORIGINAL_VERSION" ]]; then
+            cp "$TAURI_CONF" "$TAURI_CONF.bak"
+            trap 'mv "$TAURI_CONF.bak" "$TAURI_CONF"' EXIT
+
+            jq --arg version "$NORMALIZED_VERSION" '.version = $version' \
+              "$TAURI_CONF" > "$TAURI_CONF.tmp"
+            mv "$TAURI_CONF.tmp" "$TAURI_CONF"
+
+            UPDATED_VERSION="$(python3 -c "import json;print(json.load(open('$TAURI_CONF'))['version'])")"
+            if [[ "$UPDATED_VERSION" != "$NORMALIZED_VERSION" ]]; then
+              echo "::error::failed to normalize tauri build version"
+              exit 1
+            fi
+          fi
+
+          pnpm tauri build --bundles appimage,deb,rpm
 
       - name: Upload raw Linux binary, AppImage, deb, and rpm to Release
         env:
@@ -84,8 +103,8 @@ jobs:
 
           for dir in appimage deb rpm; do
             for f in "$BUNDLE_DIR/$dir/"*; do
-              # o glob não casa quando o diretório não existe (rpm não é gerado
-              # em prerelease). Com `bash -e`, um teste falso abortaria o passo.
+              # o glob não casa quando o diretório não existe.
+              # com `bash -e`, um teste falso abortaria o passo.
               if [ -f "$f" ]; then
                 gh release upload "$TAG" "$f" --clobber
               fi
