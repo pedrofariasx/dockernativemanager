@@ -1,3 +1,10 @@
+# [1.17.0-beta.13](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.12...v1.17.0-beta.13) (2026-10-22)
+
+
+### Bug Fixes
+
+* normalize prerelease bundle version for rpm builds ([b1af52a](https://github.com/pedrofariasx/dockernativemanager/commit/b1af52a25d584c7277c6f444eb1d6672755bc2e1))
+
 # [1.17.0-beta.12](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.11...v1.17.0-beta.12) (2026-10-21)
 
 
