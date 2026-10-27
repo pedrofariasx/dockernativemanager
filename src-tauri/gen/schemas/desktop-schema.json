@@ -1054,6 +1054,18 @@
                         "markdownDescription": "This permission allows recursive read functionality on the application\nspecific base directories.\n\n#### This permission set includes:\n\n- `allow-read-dir`\n- `allow-read-file`\n- `allow-read-text-file`\n- `allow-read-text-file-lines`\n- `allow-read-text-file-lines-next`\n- `allow-exists`\n- `scope-app-recursive`"
                       },
                       {
+                        "description": "This enables all write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-mkdir`\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`",
+                        "type": "string",
+                        "const": "fs:write-all",
+                        "markdownDescription": "This enables all write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-mkdir`\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`"
+                      },
+                      {
+                        "description": "This enables all file write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`",
+                        "type": "string",
+                        "const": "fs:write-files",
+                        "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`"
+                      },
+                      {
                         "description": "Enables the copy_file command without any pre-configured scope.",
                         "type": "string",
                         "const": "fs:allow-copy-file",
@@ -1868,18 +1880,6 @@
                         "type": "string",
                         "const": "fs:scope-video-recursive",
                         "markdownDescription": "This scope permits recursive access to the complete `$VIDEO` folder, including sub directories and files."
-                      },
-                      {
-                        "description": "This enables all write related commands without any pre-configured accessible paths.",
-                        "type": "string",
-                        "const": "fs:write-all",
-                        "markdownDescription": "This enables all write related commands without any pre-configured accessible paths."
-                      },
-                      {
-                        "description": "This enables all file write related commands without any pre-configured accessible paths.",
-                        "type": "string",
-                        "const": "fs:write-files",
-                        "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths."
                       }
                     ]
                   }
@@ -2015,6 +2015,12 @@
           "markdownDescription": "Enables the default_window_icon command without any pre-configured scope."
         },
         {
+          "description": "Enables the exit command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:allow-exit",
+          "markdownDescription": "Enables the exit command without any pre-configured scope."
+        },
+        {
           "description": "Enables the fetch_data_store_identifiers command without any pre-configured scope.",
           "type": "string",
           "const": "core:app:allow-fetch-data-store-identifiers",
@@ -2103,6 +2109,12 @@
           "type": "string",
           "const": "core:app:deny-default-window-icon",
           "markdownDescription": "Denies the default_window_icon command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the exit command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:app:deny-exit",
+          "markdownDescription": "Denies the exit command without any pre-configured scope."
         },
         {
           "description": "Denies the fetch_data_store_identifiers command without any pre-configured scope.",
@@ -3365,6 +3377,12 @@
           "markdownDescription": "Enables the set_fullscreen command without any pre-configured scope."
         },
         {
+          "description": "Enables the set_fullscreen_on_monitor command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:allow-set-fullscreen-on-monitor",
+          "markdownDescription": "Enables the set_fullscreen_on_monitor command without any pre-configured scope."
+        },
+        {
           "description": "Enables the set_icon command without any pre-configured scope.",
           "type": "string",
           "const": "core:window:allow-set-icon",
@@ -3831,6 +3849,12 @@
           "type": "string",
           "const": "core:window:deny-set-fullscreen",
           "markdownDescription": "Denies the set_fullscreen command without any pre-configured scope."
+        },
+        {
+          "description": "Denies the set_fullscreen_on_monitor command without any pre-configured scope.",
+          "type": "string",
+          "const": "core:window:deny-set-fullscreen-on-monitor",
+          "markdownDescription": "Denies the set_fullscreen_on_monitor command without any pre-configured scope."
         },
         {
           "description": "Denies the set_icon command without any pre-configured scope.",
@@ -4985,6 +5009,18 @@
           "markdownDescription": "This permission allows recursive read functionality on the application\nspecific base directories.\n\n#### This permission set includes:\n\n- `allow-read-dir`\n- `allow-read-file`\n- `allow-read-text-file`\n- `allow-read-text-file-lines`\n- `allow-read-text-file-lines-next`\n- `allow-exists`\n- `scope-app-recursive`"
         },
         {
+          "description": "This enables all write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-mkdir`\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`",
+          "type": "string",
+          "const": "fs:write-all",
+          "markdownDescription": "This enables all write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-mkdir`\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`"
+        },
+        {
+          "description": "This enables all file write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`",
+          "type": "string",
+          "const": "fs:write-files",
+          "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths.\n#### This permission set includes:\n\n- `allow-create`\n- `allow-copy-file`\n- `allow-remove`\n- `allow-rename`\n- `allow-truncate`\n- `allow-ftruncate`\n- `allow-write`\n- `allow-write-file`\n- `allow-write-text-file`"
+        },
+        {
           "description": "Enables the copy_file command without any pre-configured scope.",
           "type": "string",
           "const": "fs:allow-copy-file",
@@ -5799,18 +5835,6 @@
           "type": "string",
           "const": "fs:scope-video-recursive",
           "markdownDescription": "This scope permits recursive access to the complete `$VIDEO` folder, including sub directories and files."
-        },
-        {
-          "description": "This enables all write related commands without any pre-configured accessible paths.",
-          "type": "string",
-          "const": "fs:write-all",
-          "markdownDescription": "This enables all write related commands without any pre-configured accessible paths."
-        },
-        {
-          "description": "This enables all file write related commands without any pre-configured accessible paths.",
-          "type": "string",
-          "const": "fs:write-files",
-          "markdownDescription": "This enables all file write related commands without any pre-configured accessible paths."
         }
       ]
     },

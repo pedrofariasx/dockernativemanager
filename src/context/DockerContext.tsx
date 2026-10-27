@@ -54,6 +54,8 @@ export interface HostStats {
   net_tx_bytes: number;
 }
 
+export type DaemonState = "connecting" | "connected" | "disconnected";
+
 interface DockerContextType {
   containers: Container[];
   stacks: Stack[];
@@ -65,6 +67,8 @@ interface DockerContextType {
   hostStats: HostStats | null;
   hostStatsHistory: HostStats[];
   isConnected: boolean;
+  daemonState: DaemonState;
+  connectionError: string | null;
   isManagingService: boolean;
   hasLoadedOnce: boolean;
   loading: Record<string, boolean>;
@@ -100,6 +104,7 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [hostStats, setHostStats] = useState<HostStats | null>(null);
   const [hostStatsHistory, setHostStatsHistory] = useState<HostStats[]>([]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
   const [isManagingService, setIsManagingService] = useState<boolean>(false);
   const [pullingImages, setPullingImages] = useState<Record<string, { status: string; progress: number | null }>>({});
   const [deployingStacks, setDeployingStacks] = useState<Record<string, { status: string }>>({});
@@ -194,9 +199,11 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSystemInfo(data);
       // Valeu por reportar, João!
       setIsConnected(true);
+      setConnectionError(null);
     } catch (err) {
       console.error("Error fetching system info:", err);
       setIsConnected(false);
+      setConnectionError(String(err));
       setSystemInfo(null);
     } finally {
       setLoading((prev) => ({ ...prev, systemInfo: false }));
@@ -452,6 +459,12 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [refreshAll]);
 
+  const daemonState: DaemonState = isConnected
+    ? "connected"
+    : !hasLoadedOnce || isManagingService
+      ? "connecting"
+      : "disconnected";
+
   return (
     <DockerContext.Provider
       value={{
@@ -465,6 +478,8 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         hostStats,
         hostStatsHistory,
         isConnected,
+        daemonState,
+        connectionError,
         isManagingService,
         hasLoadedOnce,
         loading,

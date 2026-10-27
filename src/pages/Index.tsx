@@ -13,7 +13,7 @@
 
 import { useMemo, memo } from "react";
 import { useNavigate } from "react-router-dom";
-import { useDocker } from "@/context/DockerContext";
+import { useDocker, type DaemonState } from "@/context/DockerContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { formatBytes } from "@/lib/utils";
@@ -29,26 +29,43 @@ import {
   MemoryStick,
   Disc2,
   Container,
-  AlertTriangle,
 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Button } from "@/components/ui/button";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import DaemonDisconnectedState from "@/components/dashboard/DaemonDisconnectedState";
 import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, LineChart, Line } from "recharts";
 
 const Index = () => {
-  const {
-    systemInfo: info,
-    volumes,
-    networks,
-    events,
-    hostStats,
-    hostStatsHistory,
-    isConnected,
-    loading,
-    hasLoadedOnce,
-    manageService,
-  } = useDocker();
+  const { daemonState } = useDocker();
+  const View = DASHBOARD_VIEWS[daemonState];
+
+  return (
+    <div className="p-8 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-3xl font-bold text-foreground tracking-tight">Dashboard</h2>
+          <p className="text-muted-foreground mt-1">System overview and Docker daemon status.</p>
+        </div>
+      </div>
+
+      <View />
+    </div>
+  );
+};
+
+const DashboardSkeleton = () => (
+  <div
+    data-testid="dashboard-skeleton"
+    aria-hidden="true"
+    className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4"
+  >
+    {Array.from({ length: 8 }, (_, i) => (
+      <Skeleton key={i} className="h-[130px] rounded-lg" />
+    ))}
+  </div>
+);
+
+const ConnectedDashboard = () => {
+  const { systemInfo: info, volumes, networks, events, hostStats, hostStatsHistory, loading } = useDocker();
 
   const containersIcon = useMemo(() => <Box className="w-5 h-5 text-blue-500" />, []);
   const imagesIcon = useMemo(() => <Disc2 className="w-5 h-5 text-emerald-500" />, []);
@@ -68,7 +85,7 @@ const Index = () => {
       ].filter((d) => d.value > 0)
     : [];
 
-  const isInitialLoading = isConnected && loading.systemInfo && !info;
+  const isInitialLoading = loading.systemInfo && !info;
 
   const cpuChartData = useMemo(() => hostStatsHistory.map((h) => ({ val: h.cpu_usage })), [hostStatsHistory]);
   const memoryChartData = useMemo(() => hostStatsHistory.map((h) => ({ val: h.memory_used })), [hostStatsHistory]);
@@ -99,70 +116,19 @@ const Index = () => {
   );
 
   return (
-    <div className="p-8 space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground tracking-tight">Dashboard</h2>
-          <p className="text-muted-foreground mt-1">System overview and Docker daemon status.</p>
-        </div>
-      </div>
-
-      {hasLoadedOnce && !isConnected && (
-        <Alert
-          variant="destructive"
-          className="bg-destructive/10 dark:bg-destructive/20 border-destructive/20 dark:border-destructive/40 animate-in fade-in slide-in-from-top-4 duration-500 flex flex-col md:flex-row md:items-center justify-between gap-4 backdrop-blur-md"
-        >
-          <div className="flex gap-4">
-            <AlertTriangle className="h-5 w-5 shrink-0 text-destructive dark:text-rose-500" />
-            <div>
-              <AlertTitle className="text-destructive dark:text-rose-500 font-bold text-base">
-                Docker Daemon Disconnected
-              </AlertTitle>
-              <AlertDescription className="text-destructive/90 dark:text-rose-400 font-semibold">
-                The application is unable to connect to the Docker daemon. Please ensure Docker is running and the
-                socket is accessible.
-              </AlertDescription>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <Button
-              size="sm"
-              variant="default"
-              className="bg-emerald-600 hover:bg-emerald-700 text-white border-none shadow-sm shadow-emerald-900/20 font-bold"
-              onClick={() => manageService("start")}
-              title="Executes 'systemctl start docker' to bring the service online"
-            >
-              Start Service
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="bg-background/50 dark:bg-background/20 border-destructive/30 dark:border-rose-500/30 hover:bg-background text-destructive dark:text-rose-400 font-bold"
-              onClick={() => manageService("reconnect")}
-              title="Attempts to reconnect to the Docker socket without restarting the system service"
-            >
-              Refresh Connection
-            </Button>
-          </div>
-        </Alert>
-      )}
-
+    <>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Containers"
-          value={isConnected ? info?.containers : 0}
-          subtext={
-            isConnected
-              ? `${info?.containers_running} running, ${info?.containers_stopped} stopped`
-              : "0 running, 0 stopped"
-          }
+          value={info?.containers}
+          subtext={`${info?.containers_running} running, ${info?.containers_stopped} stopped`}
           icon={containersIcon}
           loading={isInitialLoading}
           to="/containers"
         />
         <StatCard
           title="Images"
-          value={isConnected ? info?.images : 0}
+          value={info?.images}
           subtext="Total images on disk"
           icon={imagesIcon}
           loading={isInitialLoading}
@@ -170,18 +136,18 @@ const Index = () => {
         />
         <StatCard
           title="Volumes"
-          value={isConnected ? volumes.length : 0}
+          value={volumes.length}
           subtext="Local storage volumes"
           icon={volumesIcon}
-          loading={isConnected && loading.volumes && volumes.length === 0}
+          loading={loading.volumes && volumes.length === 0}
           to="/volumes"
         />
         <StatCard
           title="Networks"
-          value={isConnected ? networks.length : 0}
+          value={networks.length}
           subtext="Docker networks"
           icon={networksIcon}
-          loading={isConnected && loading.networks && networks.length === 0}
+          loading={loading.networks && networks.length === 0}
           to="/networks"
         />
       </div>
@@ -189,69 +155,57 @@ const Index = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="CPU Usage"
-          value={isConnected && hostStats ? `${hostStats.cpu_usage.toFixed(1)}%` : "0%"}
-          subtext={isConnected ? `${info?.ncpu} Cores active` : "Monitoring suspended"}
+          value={hostStats ? `${hostStats.cpu_usage.toFixed(1)}%` : "0%"}
+          subtext={`${info?.ncpu} Cores active`}
           icon={cpuIcon}
-          loading={isConnected && !hostStats && isInitialLoading}
+          loading={!hostStats && isInitialLoading}
           chartData={cpuChartData}
           series={cpuSeries}
         />
         <StatCard
           title="Memory"
-          value={isConnected && hostStats ? formatBytes(hostStats.memory_used) : "0 B"}
-          subtext={
-            isConnected ? `of ${hostStats ? formatBytes(hostStats.memory_total) : "0 B"}` : "Monitoring suspended"
-          }
+          value={hostStats ? formatBytes(hostStats.memory_used) : "0 B"}
+          subtext={`of ${hostStats ? formatBytes(hostStats.memory_total) : "0 B"}`}
           icon={memIcon}
-          loading={isConnected && !hostStats && isInitialLoading}
+          loading={!hostStats && isInitialLoading}
           chartData={memoryChartData}
           series={memorySeries}
         />
         <StatCard
           title="Disk I/O"
-          value={
-            isConnected && hostStats
-              ? `${formatBytes(hostStats.disk_read_bytes + hostStats.disk_write_bytes)}/s`
-              : "0 B/s"
-          }
+          value={hostStats ? `${formatBytes(hostStats.disk_read_bytes + hostStats.disk_write_bytes)}/s` : "0 B/s"}
           subtext={useMemo(
             () => (
               <div className="flex items-center gap-2">
                 <span className="text-emerald-400">
-                  R: {isConnected && hostStats ? formatBytes(hostStats.disk_read_bytes) : "0 B"}/s
+                  R: {hostStats ? formatBytes(hostStats.disk_read_bytes) : "0 B"}/s
                 </span>
                 <span className="text-rose-400">
-                  W: {isConnected && hostStats ? formatBytes(hostStats.disk_write_bytes) : "0 B"}/s
+                  W: {hostStats ? formatBytes(hostStats.disk_write_bytes) : "0 B"}/s
                 </span>
               </div>
             ),
-            [hostStats, isConnected],
+            [hostStats],
           )}
           icon={diskIcon}
-          loading={isConnected && !hostStats && isInitialLoading}
+          loading={!hostStats && isInitialLoading}
           chartData={diskChartData}
           series={diskSeries}
         />
         <StatCard
           title="Network"
-          value={
-            isConnected && hostStats ? `${formatBytes(hostStats.net_rx_bytes + hostStats.net_tx_bytes)}/s` : "0 B/s"
-          }
+          value={hostStats ? `${formatBytes(hostStats.net_rx_bytes + hostStats.net_tx_bytes)}/s` : "0 B/s"}
           subtext={useMemo(
             () => (
               <div className="flex items-center gap-2">
-                <span className="text-blue-400">
-                  ↓ {isConnected && hostStats ? formatBytes(hostStats.net_rx_bytes) : "0 B"}/s
-                </span>
-                <span className="text-purple-400">
-                  ↑ {isConnected && hostStats ? formatBytes(hostStats.net_tx_bytes) : "0 B"}/s
-                </span>
+                <span className="text-blue-400">↓ {hostStats ? formatBytes(hostStats.net_rx_bytes) : "0 B"}/s</span>
+                <span className="text-purple-400">↑ {hostStats ? formatBytes(hostStats.net_tx_bytes) : "0 B"}/s</span>
               </div>
             ),
-            [hostStats, isConnected],
+            [hostStats],
           )}
           icon={netIcon}
-          loading={isConnected && !hostStats && isInitialLoading}
+          loading={!hostStats && isInitialLoading}
           chartData={netChartData}
           series={netSeries}
         />
@@ -272,7 +226,7 @@ const Index = () => {
                 {isInitialLoading ? (
                   <Skeleton className="h-6 w-24" />
                 ) : (
-                  <p className="text-foreground font-mono text-lg">{isConnected ? info?.version : "N/A"}</p>
+                  <p className="text-foreground font-mono text-lg">{info?.version}</p>
                 )}
               </div>
               <div className="space-y-1">
@@ -280,7 +234,7 @@ const Index = () => {
                 {isInitialLoading ? (
                   <Skeleton className="h-6 w-48" />
                 ) : (
-                  <p className="text-foreground text-lg">{isConnected ? info?.operating_system : "N/A"}</p>
+                  <p className="text-foreground text-lg">{info?.operating_system}</p>
                 )}
               </div>
               <div className="space-y-1">
@@ -288,7 +242,7 @@ const Index = () => {
                 {isInitialLoading ? (
                   <Skeleton className="h-6 w-32" />
                 ) : (
-                  <p className="text-foreground text-lg font-mono">{isConnected ? info?.kernel_version : "N/A"}</p>
+                  <p className="text-foreground text-lg font-mono">{info?.kernel_version}</p>
                 )}
               </div>
               <div className="space-y-1">
@@ -296,7 +250,7 @@ const Index = () => {
                 {isInitialLoading ? (
                   <Skeleton className="h-6 w-24" />
                 ) : (
-                  <p className="text-foreground text-lg">{isConnected ? info?.storage_driver : "N/A"}</p>
+                  <p className="text-foreground text-lg">{info?.storage_driver}</p>
                 )}
               </div>
               <div className="space-y-1">
@@ -304,7 +258,7 @@ const Index = () => {
                 {isInitialLoading ? (
                   <Skeleton className="h-6 w-16" />
                 ) : (
-                  <p className="text-foreground text-lg">{isConnected ? `${info?.ncpu} Cores` : "N/A"}</p>
+                  <p className="text-foreground text-lg">{`${info?.ncpu} Cores`}</p>
                 )}
               </div>
               <div className="space-y-1">
@@ -312,7 +266,7 @@ const Index = () => {
                 {isInitialLoading ? (
                   <Skeleton className="h-6 w-24" />
                 ) : (
-                  <p className="text-foreground text-lg">{isConnected && info ? formatBytes(info.mem_total) : "N/A"}</p>
+                  <p className="text-foreground text-lg">{info ? formatBytes(info.mem_total) : "N/A"}</p>
                 )}
               </div>
               <div className="space-y-1">
@@ -320,7 +274,7 @@ const Index = () => {
                 {isInitialLoading ? (
                   <Skeleton className="h-6 w-24" />
                 ) : (
-                  <p className="text-foreground text-lg uppercase">{isConnected ? info?.architecture : "N/A"}</p>
+                  <p className="text-foreground text-lg uppercase">{info?.architecture}</p>
                 )}
               </div>
               <div className="space-y-1">
@@ -328,7 +282,7 @@ const Index = () => {
                 {isInitialLoading ? (
                   <Skeleton className="h-6 w-24" />
                 ) : (
-                  <p className="text-foreground text-lg">{isConnected ? info?.logging_driver : "N/A"}</p>
+                  <p className="text-foreground text-lg">{info?.logging_driver}</p>
                 )}
               </div>
             </div>
@@ -376,7 +330,7 @@ const Index = () => {
             ) : (
               <div className="flex flex-col items-center justify-center text-muted-foreground h-full">
                 <Box className="w-12 h-12 mb-2 opacity-20" />
-                <p>{isConnected ? "No containers found" : "Service Disconnected"}</p>
+                <p>No containers found</p>
               </div>
             )}
           </CardContent>
@@ -507,8 +461,14 @@ const Index = () => {
           )}
         </CardContent>
       </Card>
-    </div>
+    </>
   );
+};
+
+const DASHBOARD_VIEWS: Record<DaemonState, React.ComponentType> = {
+  connecting: DashboardSkeleton,
+  connected: ConnectedDashboard,
+  disconnected: DaemonDisconnectedState,
 };
 
 interface StatCardProps {
