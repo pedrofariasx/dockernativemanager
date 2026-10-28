@@ -11,7 +11,7 @@ import { useDocker } from "@/context/DockerContext";
 import { Button } from "@/components/ui/button";
 
 const DaemonDisconnectedState = () => {
-  const { manageService, connectionError } = useDocker();
+  const { manageService, isManagingService, connectionError } = useDocker();
   const [showDetails, setShowDetails] = useState(false);
 
   return (
@@ -28,6 +28,7 @@ const DaemonDisconnectedState = () => {
         <Button
           className="bg-emerald-600 hover:bg-emerald-700 text-white"
           onClick={() => manageService("start")}
+          disabled={isManagingService}
           title="Executes 'systemctl start docker' to bring the service online"
         >
           <Play aria-hidden="true" />
@@ -36,6 +37,7 @@ const DaemonDisconnectedState = () => {
         <Button
           variant="outline"
           onClick={() => manageService("reconnect")}
+          disabled={isManagingService}
           title="Attempts to reconnect to the Docker socket without restarting the system service"
         >
           <RotateCw aria-hidden="true" />

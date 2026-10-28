@@ -55,6 +55,7 @@ export interface HostStats {
 }
 
 export type DaemonState = "connecting" | "connected" | "disconnected";
+type ServiceAction = "start" | "stop" | "restart" | "reconnect";
 
 interface DockerContextType {
   containers: Container[];
@@ -88,7 +89,7 @@ interface DockerContextType {
     envContent: string | null,
     stackType?: string,
   ) => Promise<void>;
-  manageService: (action: "start" | "stop" | "restart" | "reconnect") => Promise<void>;
+  manageService: (action: ServiceAction) => Promise<void>;
 }
 
 const DockerContext = createContext<DockerContextType | undefined>(undefined);
@@ -105,7 +106,7 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [hostStatsHistory, setHostStatsHistory] = useState<HostStats[]>([]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [isManagingService, setIsManagingService] = useState<boolean>(false);
+  const [serviceAction, setServiceAction] = useState<ServiceAction | null>(null);
   const [pullingImages, setPullingImages] = useState<Record<string, { status: string; progress: number | null }>>({});
   const [deployingStacks, setDeployingStacks] = useState<Record<string, { status: string }>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({
@@ -308,8 +309,8 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   );
 
   const manageService = useCallback(
-    async (action: "start" | "stop" | "restart" | "reconnect") => {
-      setIsManagingService(true);
+    async (action: ServiceAction) => {
+      setServiceAction(action);
       setLoading((prev) => ({ ...prev, systemInfo: true }));
       try {
         const result = await manageDockerService(action);
@@ -330,24 +331,16 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setHostStatsHistory([]);
         } else {
           // Only refresh if starting, restarting or reconnecting
-          // SSH tunnels can take several seconds to establish
-          const delay = action === "reconnect" ? 2000 : 3000;
-          setTimeout(async () => {
-            try {
-              await refreshAll();
-            } catch {
-              // If first attempt fails (e.g., SSH tunnel still starting), retry after delay
-              if (action === "reconnect") {
-                setTimeout(refreshAll, 3000);
-              }
-            }
-          }, delay);
+          // SSH tunnels can take several seconds to establish.
+          // Awaited so the action stays pending (daemon "connecting") until the refresh lands.
+          await new Promise((resolve) => setTimeout(resolve, action === "reconnect" ? 2000 : 3000));
+          await refreshAll();
         }
       } catch (err) {
         showError(`Failed to ${action} Docker service: ${err}`);
         setLoading((prev) => ({ ...prev, systemInfo: false }));
       } finally {
-        setIsManagingService(false);
+        setServiceAction(null);
       }
     },
     [refreshAll],
@@ -459,9 +452,11 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [refreshAll]);
 
+  const isManagingService = serviceAction !== null;
+  // A pending stop must not read as "connecting": the daemon is going down on purpose.
   const daemonState: DaemonState = isConnected
     ? "connected"
-    : !hasLoadedOnce || isManagingService
+    : !hasLoadedOnce || (isManagingService && serviceAction !== "stop")
       ? "connecting"
       : "disconnected";
 
