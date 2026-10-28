@@ -6,12 +6,14 @@
  */
 
 import { useState } from "react";
-import { Play, RotateCw, Unplug } from "lucide-react";
+import { Loader2, Play, RotateCw, Unplug } from "lucide-react";
 import { useDocker } from "@/context/DockerContext";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 const DaemonDisconnectedState = () => {
-  const { manageService, isManagingService, connectionError } = useDocker();
+  const { manageService, serviceAction, isManagingService, connectionError } = useDocker();
+  const isStarting = serviceAction === "start";
   const [showDetails, setShowDetails] = useState(false);
 
   return (
@@ -31,8 +33,8 @@ const DaemonDisconnectedState = () => {
           disabled={isManagingService}
           title="Executes 'systemctl start docker' to bring the service online"
         >
-          <Play aria-hidden="true" />
-          Start daemon
+          {isStarting ? <Loader2 aria-hidden="true" className="animate-spin" /> : <Play aria-hidden="true" />}
+          {isStarting ? "Starting…" : "Start daemon"}
         </Button>
         <Button
           variant="outline"
@@ -40,7 +42,7 @@ const DaemonDisconnectedState = () => {
           disabled={isManagingService}
           title="Attempts to reconnect to the Docker socket without restarting the system service"
         >
-          <RotateCw aria-hidden="true" />
+          <RotateCw aria-hidden="true" className={cn(serviceAction === "reconnect" && "animate-spin")} />
           Retry
         </Button>
       </div>

@@ -70,6 +70,7 @@ interface DockerContextType {
   isConnected: boolean;
   daemonState: DaemonState;
   connectionError: string | null;
+  serviceAction: ServiceAction | null;
   isManagingService: boolean;
   hasLoadedOnce: boolean;
   loading: Record<string, boolean>;
@@ -453,10 +454,11 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [refreshAll]);
 
   const isManagingService = serviceAction !== null;
-  // A pending stop must not read as "connecting": the daemon is going down on purpose.
+  // Only the launch and a restart are transient. A pending start, retry or stop keeps showing
+  // "disconnected" until the daemon actually answers (or actually goes down).
   const daemonState: DaemonState = isConnected
     ? "connected"
-    : !hasLoadedOnce || (isManagingService && serviceAction !== "stop")
+    : !hasLoadedOnce || serviceAction === "restart"
       ? "connecting"
       : "disconnected";
 
@@ -475,6 +477,7 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isConnected,
         daemonState,
         connectionError,
+        serviceAction,
         isManagingService,
         hasLoadedOnce,
         loading,

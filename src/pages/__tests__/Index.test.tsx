@@ -7,10 +7,13 @@ import Index from "../Index";
 
 const manageService = vi.fn<(action: string) => Promise<void>>();
 let daemonState: DaemonState;
+let serviceAction: string | null = null;
 
 vi.mock("@/context/DockerContext", () => ({
   useDocker: () => ({
     daemonState,
+    serviceAction,
+    isManagingService: serviceAction !== null,
     manageService,
     connectionError: "dial unix /var/run/docker.sock: connect: no such file or directory",
     systemInfo: {
@@ -47,7 +50,18 @@ const renderDashboard = (state: DaemonState) => {
 };
 
 describe("Dashboard", () => {
-  beforeEach(() => manageService.mockClear());
+  beforeEach(() => {
+    manageService.mockClear();
+    serviceAction = null;
+  });
+
+  it("keeps the empty state with a busy start button while starting", () => {
+    serviceAction = "start";
+    renderDashboard("disconnected");
+    expect(screen.getByText("Docker isn't running")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /starting/i })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /retry/i })).toBeDisabled();
+  });
 
   it("shows skeletons while connecting", () => {
     renderDashboard("connecting");
