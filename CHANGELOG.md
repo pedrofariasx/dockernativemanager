@@ -1,3 +1,10 @@
+# [1.17.0-beta.15](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.14...v1.17.0-beta.15) (2026-10-29)
+
+
+### Bug Fixes
+
+* gera versao de pre-release rpm sem quebrar versao do tauri ([21c320e](https://github.com/pedrofariasx/dockernativemanager/commit/21c320e7486a60a898ae36f9669500d62326d612))
+
 # [1.17.0-beta.14](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.13...v1.17.0-beta.14) (2026-10-29)
 
 
