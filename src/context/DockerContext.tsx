@@ -54,6 +54,9 @@ export interface HostStats {
   net_tx_bytes: number;
 }
 
+export type DaemonState = "connecting" | "connected" | "disconnected";
+type ServiceAction = "start" | "stop" | "restart" | "reconnect";
+
 interface DockerContextType {
   containers: Container[];
   stacks: Stack[];
@@ -65,6 +68,9 @@ interface DockerContextType {
   hostStats: HostStats | null;
   hostStatsHistory: HostStats[];
   isConnected: boolean;
+  daemonState: DaemonState;
+  connectionError: string | null;
+  serviceAction: ServiceAction | null;
   isManagingService: boolean;
   hasLoadedOnce: boolean;
   loading: Record<string, boolean>;
@@ -84,7 +90,7 @@ interface DockerContextType {
     envContent: string | null,
     stackType?: string,
   ) => Promise<void>;
-  manageService: (action: "start" | "stop" | "restart" | "reconnect") => Promise<void>;
+  manageService: (action: ServiceAction) => Promise<void>;
 }
 
 const DockerContext = createContext<DockerContextType | undefined>(undefined);
@@ -100,7 +106,8 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [hostStats, setHostStats] = useState<HostStats | null>(null);
   const [hostStatsHistory, setHostStatsHistory] = useState<HostStats[]>([]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
-  const [isManagingService, setIsManagingService] = useState<boolean>(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [serviceAction, setServiceAction] = useState<ServiceAction | null>(null);
   const [pullingImages, setPullingImages] = useState<Record<string, { status: string; progress: number | null }>>({});
   const [deployingStacks, setDeployingStacks] = useState<Record<string, { status: string }>>({});
   const [loading, setLoading] = useState<Record<string, boolean>>({
@@ -194,9 +201,11 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setSystemInfo(data);
       // Valeu por reportar, João!
       setIsConnected(true);
+      setConnectionError(null);
     } catch (err) {
       console.error("Error fetching system info:", err);
       setIsConnected(false);
+      setConnectionError(String(err));
       setSystemInfo(null);
     } finally {
       setLoading((prev) => ({ ...prev, systemInfo: false }));
@@ -301,8 +310,8 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   );
 
   const manageService = useCallback(
-    async (action: "start" | "stop" | "restart" | "reconnect") => {
-      setIsManagingService(true);
+    async (action: ServiceAction) => {
+      setServiceAction(action);
       setLoading((prev) => ({ ...prev, systemInfo: true }));
       try {
         const result = await manageDockerService(action);
@@ -323,24 +332,16 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           setHostStatsHistory([]);
         } else {
           // Only refresh if starting, restarting or reconnecting
-          // SSH tunnels can take several seconds to establish
-          const delay = action === "reconnect" ? 2000 : 3000;
-          setTimeout(async () => {
-            try {
-              await refreshAll();
-            } catch {
-              // If first attempt fails (e.g., SSH tunnel still starting), retry after delay
-              if (action === "reconnect") {
-                setTimeout(refreshAll, 3000);
-              }
-            }
-          }, delay);
+          // SSH tunnels can take several seconds to establish.
+          // Awaited so the action stays pending (daemon "connecting") until the refresh lands.
+          await new Promise((resolve) => setTimeout(resolve, action === "reconnect" ? 2000 : 3000));
+          await refreshAll();
         }
       } catch (err) {
         showError(`Failed to ${action} Docker service: ${err}`);
         setLoading((prev) => ({ ...prev, systemInfo: false }));
       } finally {
-        setIsManagingService(false);
+        setServiceAction(null);
       }
     },
     [refreshAll],
@@ -452,6 +453,15 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [refreshAll]);
 
+  const isManagingService = serviceAction !== null;
+  // Only the launch and a restart are transient. A pending start, retry or stop keeps showing
+  // "disconnected" until the daemon actually answers (or actually goes down).
+  const daemonState: DaemonState = isConnected
+    ? "connected"
+    : !hasLoadedOnce || serviceAction === "restart"
+      ? "connecting"
+      : "disconnected";
+
   return (
     <DockerContext.Provider
       value={{
@@ -465,6 +475,9 @@ export const DockerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         hostStats,
         hostStatsHistory,
         isConnected,
+        daemonState,
+        connectionError,
+        serviceAction,
         isManagingService,
         hasLoadedOnce,
         loading,
