@@ -89,43 +89,36 @@ jobs:
       - name: Build Tauri App
         run: |
           set -euo pipefail
-          TAG="${{ needs.release.outputs.new_tag }}"
-          TAURI_CONF="src-tauri/tauri.conf.json"
-          ORIGINAL_VERSION="$(python3 -c "import json;print(json.load(open('$TAURI_CONF'))['version'])")"
-          NORMALIZED_VERSION="${ORIGINAL_VERSION//-/_}"
-          TAG_VERSION="${TAG#v}"
+          VERSION="$(jq -r .version src-tauri/tauri.conf.json)"
 
-          echo "Release tag: $TAG"
-          echo "Tauri version (original): $ORIGINAL_VERSION"
-          echo "Tauri version (build): $NORMALIZED_VERSION"
+          if [[ "$VERSION" == *-* ]]; then
+            pnpm tauri build --bundles appimage,deb
 
-          if [[ "$TAG_VERSION" != "$ORIGINAL_VERSION" ]]; then
-            echo "::warning::tag version ($TAG_VERSION) differs from tauri.conf version ($ORIGINAL_VERSION)"
+            # O Tauri exige semver na versão e o RPM não aceita '-' nela (é o
+            # separador do NEVRA). O `tauri bundle` reempacota o binário já
+            # compilado como versão 1.18.0 + release 0.beta.1, que ordena antes
+            # da 1.18.0 estável; o app instalado segue com a versão real.
+            RPM_CONFIG="$(jq -nc --arg v "${VERSION%%-*}" --arg r "0.${VERSION#*-}" \
+              '{version: $v, bundle: {linux: {rpm: {release: $r}}}}')"
+            pnpm tauri bundle --bundles rpm --config "$RPM_CONFIG"
+          else
+            pnpm tauri build --bundles appimage,deb,rpm
           fi
 
-          if [[ "$NORMALIZED_VERSION" != "$ORIGINAL_VERSION" ]]; then
-            cp "$TAURI_CONF" "$TAURI_CONF.bak"
-            trap 'mv "$TAURI_CONF.bak" "$TAURI_CONF"' EXIT
+          # Nome no mesmo padrão dos outros pacotes; a versão do rpm fica nos metadados.
+          mv src-tauri/target/release/bundle/rpm/*.rpm \
+            "src-tauri/target/release/bundle/rpm/Docker.Native.Manager_${VERSION}_x86_64.rpm"
 
-            jq --arg version "$NORMALIZED_VERSION" '.version = $version' \
-              "$TAURI_CONF" > "$TAURI_CONF.tmp"
-            mv "$TAURI_CONF.tmp" "$TAURI_CONF"
-
-            UPDATED_VERSION="$(python3 -c "import json;print(json.load(open('$TAURI_CONF'))['version'])")"
-            if [[ "$UPDATED_VERSION" != "$NORMALIZED_VERSION" ]]; then
-              echo "::error::failed to normalize tauri build version"
-              exit 1
-            fi
-          fi
-
-          pnpm tauri build --bundles appimage,deb,rpm
-
-      - name: Upload AppImage, deb, rpm to Release
+      - name: Upload raw Linux binary, AppImage, deb, and rpm to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ needs.release.outputs.new_tag }}"
           BUNDLE_DIR="src-tauri/target/release/bundle"
+
+          gh release upload "$TAG" \
+            "src-tauri/target/release/docker-native-manager#docker-native-manager-linux-x86_64" \
+            --clobber
 
           for dir in appimage deb rpm; do
             for f in "$BUNDLE_DIR/$dir/"*; do
