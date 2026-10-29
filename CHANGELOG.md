@@ -1,3 +1,16 @@
+# [1.17.0-beta.14](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.13...v1.17.0-beta.14) (2026-10-29)
+
+
+### Bug Fixes
+
+* **dashboard:** corrigir estados de carregamento ao iniciar e parar o daemon ([edf8240](https://github.com/pedrofariasx/dockernativemanager/commit/edf824034af02f0369ef9d1064f3d0999b175230))
+* **dashboard:** manter Docker isnt running ate o daemon responder ([3094717](https://github.com/pedrofariasx/dockernativemanager/commit/30947175798e4f367bf13f14b3ff36cf25e6cbe6))
+
+
+### Features
+
+* **dashboard:** simplificar estado de daemon e melhorias na tela inicial ([8b45cde](https://github.com/pedrofariasx/dockernativemanager/commit/8b45cde873874b91f09503d3b5f2677a8c03713b))
+
 # [1.17.0-beta.13](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.12...v1.17.0-beta.13) (2026-10-22)
 
 
