@@ -15,7 +15,7 @@ serde_json = "1.0"
 bollard = { version = "0.21.1", features = ["chrono", "time"] }
 tokio = { version = "1", features = ["full"] }
 futures-util = "0.3"
-sysinfo = "0.39.5"
+sysinfo = "0.40.0"
 chrono = { version = "0.4", features = ["serde"] }
 tauri-plugin-dialog = "2.6.0"
 tauri-plugin-fs = "2.7.1"
