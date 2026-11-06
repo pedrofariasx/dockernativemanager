@@ -1,3 +1,10 @@
+# [1.17.0-beta.17](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.16...v1.17.0-beta.17) (2026-11-06)
+
+
+### Features
+
+* atualiza imagem do readme para nova barra lateral de status ([9423268](https://github.com/pedrofariasx/dockernativemanager/commit/942326830fcdd2ce9ad9a3c548810d892e42f5cf))
+
 # [1.17.0-beta.16](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.15...v1.17.0-beta.16) (2026-11-06)
 
 
