@@ -1,3 +1,10 @@
+# [1.17.0-beta.16](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.15...v1.17.0-beta.16) (2026-11-06)
+
+
+### Bug Fixes
+
+* correct pre-release version build and bump pnpm to 11.28.11 ([10f582a](https://github.com/pedrofariasx/dockernativemanager/commit/10f582a5e753e9bc89323a8f65b916c5d2b2795e))
+
 # [1.17.0-beta.15](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.14...v1.17.0-beta.15) (2026-10-29)
 
 
