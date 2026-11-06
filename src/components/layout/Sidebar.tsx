@@ -27,6 +27,7 @@ import {
   Disc2,
   Container,
   EraserIcon,
+  Play,
   Square as SquareIcon,
   RotateCw,
   Waypoints,
@@ -460,7 +461,7 @@ const Sidebar = () => {
                 />
               </DropdownMenuTrigger>
               <DropdownMenuContent side="top" align="start" className="w-56 bg-card border-border">
-                {isConnected && (
+                {isConnected ? (
                   <>
                     <DropdownMenuItem
                       className="hover:bg-muted focus:bg-muted cursor-pointer"
@@ -480,6 +481,15 @@ const Sidebar = () => {
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-border" />
                   </>
+                ) : (
+                  <DropdownMenuItem
+                    className="hover:bg-muted focus:bg-muted cursor-pointer"
+                    onClick={() => manageService("start")}
+                    disabled={isManagingService}
+                  >
+                    <Play className="mr-2 h-4 w-4 text-emerald-500" />
+                    <span>Start daemon</span>
+                  </DropdownMenuItem>
                 )}
                 <DropdownMenuItem
                   className="hover:bg-muted focus:bg-muted cursor-pointer"
