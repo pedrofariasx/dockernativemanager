@@ -109,6 +109,18 @@
 
 * apt repo deb glob and gpg signing without tty ([4fef260](https://github.com/pedrofariasx/dockernativemanager/commit/4fef260c123fede4b5511cceb4441942a709b71a))
 
+# [1.17.0](https://github.com/pedrofariasx/dockernativemanager/compare/v1.16.2...v1.17.0) (2026-10-13)
+
+
+### Bug Fixes
+
+* remove impure date creation from Images render path ([7132469](https://github.com/pedrofariasx/dockernativemanager/commit/7132469558d54f2a96f85be0ad89d187b0e7a994))
+
+
+### Features
+
+* add password authentication and auto-setup for remote contexts ([800e9ce](https://github.com/pedrofariasx/dockernativemanager/commit/800e9ce323e8c8f8685625c5e40854c6bd046910))
+
 # [1.17.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0-beta.1...v1.17.0-beta.2) (2026-10-05)
 
 
