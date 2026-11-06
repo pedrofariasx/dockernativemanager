@@ -84,7 +84,7 @@
     "postcss": "^8.5.32",
     "prettier": "^3.9.10",
     "semantic-release": "^25.0.9",
-    "tailwindcss": "^3.4.11",
+    "tailwindcss": "^4.3.4",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",
     "vitest": "^5.0.5"
