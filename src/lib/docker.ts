@@ -657,8 +657,3 @@ export const configureSshHost = async (
   if (!isTauri) return console.log("Mock: Configuring SSH host", hostname, user, port, identityFile);
   return await invoke("configure_ssh_host", { hostname, user, port, identityFile });
 };
-
-export const removeSshHostConfig = async (hostname: string): Promise<void> => {
-  if (!isTauri) return console.log("Mock: Removing SSH host config", hostname);
-  return await invoke("remove_ssh_host_config", { hostname });
-};

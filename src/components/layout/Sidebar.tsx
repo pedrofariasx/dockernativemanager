@@ -128,7 +128,6 @@ const Sidebar = () => {
   const [connectionTestResult, setConnectionTestResult] = useState<{ success: boolean; message: string } | null>(null);
   const [sshKeys, setSshKeys] = useState<SshKeyInfo[]>([]);
   const [selectedSshKey, setSelectedSshKey] = useState<string>("");
-  const [showSshConfig, setShowSshConfig] = useState(false);
   const [authMethod, setAuthMethod] = useState<"password" | "key">("password");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -322,7 +321,6 @@ const Sidebar = () => {
       setSelectedSshKey("");
       setPassword("");
       setConnectionTestResult(null);
-      setShowSshConfig(false);
       await fetchContexts();
     } catch (err) {
       showError(`Error creating context: ${err}`);
