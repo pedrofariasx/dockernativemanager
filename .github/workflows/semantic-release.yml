@@ -5,6 +5,7 @@ on:
     branches: [main, dev]
 
 permissions:
+  actions: write
   contents: write
   issues: write
   pull-requests: write
@@ -109,16 +110,12 @@ jobs:
           mv src-tauri/target/release/bundle/rpm/*.rpm \
             "src-tauri/target/release/bundle/rpm/Docker.Native.Manager_${VERSION}_x86_64.rpm"
 
-      - name: Upload raw Linux binary, AppImage, deb, and rpm to Release
+      - name: Upload AppImage, deb, and rpm to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ needs.release.outputs.new_tag }}"
           BUNDLE_DIR="src-tauri/target/release/bundle"
-
-          gh release upload "$TAG" \
-            "src-tauri/target/release/docker-native-manager#docker-native-manager-linux-x86_64" \
-            --clobber
 
           for dir in appimage deb rpm; do
             for f in "$BUNDLE_DIR/$dir/"*; do
@@ -130,25 +127,11 @@ jobs:
             done
           done
 
-      - name: Package tar.gz and Upload
+      - name: Publish APT repository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          TAG="${{ needs.release.outputs.new_tag }}"
-          mkdir -p dist-targz
-
-          BIN_PATH="src-tauri/target/release/docker-native-manager"
-          if [ ! -f "$BIN_PATH" ]; then
-            echo "Expected binary not found at $BIN_PATH"
-            exit 1
-          fi
-
-          PKG_VERSION="${TAG#v}"
-
-          cp "$BIN_PATH" dist-targz/
-          cp LICENSE dist-targz/
-
-          TAR_GZ="Docker.Native.Manager_${PKG_VERSION}_amd64.tar.gz"
-          tar -C dist-targz -czf "$TAR_GZ" docker-native-manager LICENSE
-
-          gh release upload "$TAG" "$TAR_GZ" --clobber
+          gh workflow run release.yml \
+            --ref main \
+            --field tag="${{ needs.release.outputs.new_tag }}" \
+            --field apt_repo_mode=publish

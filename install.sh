@@ -29,8 +29,12 @@ fi
 command -v apt-get >/dev/null 2>&1 \
   || die "este script é apenas para distribuições baseadas em Debian/Ubuntu."
 
-command -v gpg >/dev/null 2>&1 || apt-get install -y --no-install-recommends gnupg \
-  || die "não foi possível instalar o gnupg (necessário para validar a assinatura do repositório)."
+if ! command -v gpg >/dev/null 2>&1; then
+  apt-get update -o Acquire::Retries=3 \
+    || die "não foi possível atualizar os índices do apt."
+  apt-get install -y --no-install-recommends gnupg \
+    || die "não foi possível instalar o gnupg (necessário para validar a assinatura do repositório)."
+fi
 
 fetch() {
   if command -v curl >/dev/null 2>&1; then
@@ -48,10 +52,21 @@ fetch() {
 log "Instalando a chave de assinatura do repositório"
 install -d -m 0755 "$(dirname "$KEYRING")"
 umask 022
-fetch "$REPO_URL/pubkey.asc" | gpg --dearmor --yes -o "$KEYRING"
+KEYRING_TMP="$(mktemp "${KEYRING}.tmp.XXXXXX")"
+trap 'rm -f "$KEYRING_TMP"' EXIT
+fetch "$REPO_URL/pubkey.asc" \
+  | gpg --dearmor --yes -o "$KEYRING_TMP" \
+  || die "não foi possível baixar ou validar a chave do repositório."
+test -s "$KEYRING_TMP" \
+  || die "a chave do repositório está vazia."
+chmod 0644 "$KEYRING_TMP"
+mv -f "$KEYRING_TMP" "$KEYRING"
 
 log "Registrando o repositório APT"
-if [ -f "$SOURCE_LIST" ] && grep -qF "$REPO_URL" "$SOURCE_LIST"; then
+if [ -f "$SOURCE_LIST" ] \
+  && grep -Eq '^[[:space:]]*deb([[:space:]]|$)' "$SOURCE_LIST" \
+  && grep -F "$REPO_URL" "$SOURCE_LIST" \
+  | grep -F "signed-by=$KEYRING" >/dev/null; then
   echo "   repositório já registrado, mantendo a configuração atual"
 else
   echo "deb [signed-by=$KEYRING] $REPO_URL stable main" > "$SOURCE_LIST"

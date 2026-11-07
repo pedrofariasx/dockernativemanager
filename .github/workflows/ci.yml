@@ -111,10 +111,20 @@ jobs:
             DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "./$DEB" >/dev/null
             dpkg -s docker-native-manager | grep -E "^(Status|Version|Depends)"
             test -x /usr/bin/docker-native-manager
-            DESKTOP="$(ls /usr/share/applications/*.desktop)"
-            test -n "$DESKTOP" && grep -q "docker-native-manager" "$DESKTOP"
+            DESKTOPS=(/usr/share/applications/*.desktop)
+            test -e "${DESKTOPS[0]}" && grep -q "docker-native-manager" "${DESKTOPS[@]}"
             test -n "$(ls /usr/share/icons/hicolor/128x128/apps/*.png 2>/dev/null)"
-            MISSING="$(ldd /usr/bin/docker-native-manager | grep "not found" || true)"
+            if LDD_OUTPUT="$(ldd /usr/bin/docker-native-manager 2>&1)"; then
+              LDD_STATUS=0
+            else
+              LDD_STATUS=$?
+            fi
+            if [ "$LDD_STATUS" -ne 0 ]; then
+              echo "::error::ldd failed with status $LDD_STATUS:"
+              echo "$LDD_OUTPUT"
+              exit 1
+            fi
+            MISSING="$(printf '%s\n' "$LDD_OUTPUT" | grep "not found" || true)"
             if [ -n "$MISSING" ]; then
               echo "::error::deb Depends is incomplete, unresolved libraries:"; echo "$MISSING"; exit 1
             fi

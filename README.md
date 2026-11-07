@@ -50,7 +50,7 @@ Log out and back in (or restart your VM, if you're using one) for the change to 
 
 ### Distributions using DPKG (Debian, Ubuntu, Mint, etc.)
 
-> **Requires glibc 2.34 or newer** (Ubuntu 22.04+, Debian 12+). Ubuntu 20.04 and Debian 11 are not supported.
+> **Requires amd64 and glibc 2.34 or newer** (Ubuntu 22.04+, Debian 12+). ARM64, Ubuntu 20.04, and Debian 11 are not supported.
 
 The fastest way:
 
@@ -63,6 +63,7 @@ Or add the APT repository manually to receive automatic updates:
 ```bash
 curl -fsSL https://pedrofariasx.github.io/dockernativemanager/pubkey.asc \
   | sudo gpg --dearmor -o /usr/share/keyrings/dockernativemanager.gpg
+sudo chmod a+r /usr/share/keyrings/dockernativemanager.gpg
 
 echo "deb [signed-by=/usr/share/keyrings/dockernativemanager.gpg] https://pedrofariasx.github.io/dockernativemanager stable main" \
   | sudo tee /etc/apt/sources.list.d/dockernativemanager.list
