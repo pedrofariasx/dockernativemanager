@@ -1,3 +1,10 @@
+## [1.18.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.18.0...v1.18.1) (2026-11-07)
+
+
+### Bug Fixes
+
+* **sidebar:** restore start daemon action ([132aad9](https://github.com/pedrofariasx/dockernativemanager/commit/132aad9875f112193c7695f24ede9efb8df9e859))
+
 # [1.18.0](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0...v1.18.0) (2026-11-07)
 
 
