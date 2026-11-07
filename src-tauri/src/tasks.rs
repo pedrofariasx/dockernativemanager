@@ -123,8 +123,14 @@ pub async fn emit_container_stats(app_handle: AppHandle) {
 
 pub async fn emit_host_stats(app_handle: AppHandle) {
     use sysinfo::{Networks, System};
-    let mut sys = System::new_all();
-    let mut networks = Networks::new_with_refreshed_list();
+    let mut sys = match System::new_all() {
+        Ok(system) => system,
+        Err(_) => return,
+    };
+    let mut networks = match Networks::new_with_refreshed_list() {
+        Ok(networks) => networks,
+        Err(_) => return,
+    };
 
     let mut last_disk_read: u64 = 0;
     let mut last_disk_write: u64 = 0;

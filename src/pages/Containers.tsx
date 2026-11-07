@@ -1208,35 +1208,50 @@ const TerminalComponent = ({ containerId, shell, user }: { containerId: string; 
   useEffect(() => {
     if (!terminalRef.current) return;
 
-    const term = new XTerm({
-      theme: {
-        background: resolvedTheme === "dark" ? "#09090b" : "#ffffff",
-        foreground: resolvedTheme === "dark" ? "#f8fafc" : "#0f172a",
-        cursor: "#3b82f6",
-      },
-      fontSize: 12,
-      fontFamily: "JetBrains Mono, Menlo, Monaco, 'Courier New', monospace",
-      cursorBlink: true,
-    });
-
-    const fitAddon = new FitAddon();
-    term.loadAddon(fitAddon);
-    term.open(terminalRef.current);
-    fitAddon.fit();
-    xtermRef.current = term;
-
-    term.writeln(`\x1b[34m[*] Connecting to container shell (${shell})...\x1b[0m`);
-
-    // Send keystrokes to backend stdin
-    const dataDispose = term.onData((data) => {
-      writeStdin(containerId, data).catch((e) => console.error("Error writing to stdin:", e));
-    });
-
+    let disposed = false;
+    let term: XTerm | null = null;
+    let dataDispose: { dispose: () => void } | null = null;
+    let fitAddon: FitAddon | null = null;
     let unlisten: (() => void) | undefined;
 
+    // O xterm mede a largura dos caracteres ao ser criado. Se a webfont ainda não
+    // carregou, a grade do terminal fica desalinhada, então esperamos a fonte.
     const setup = async () => {
+      try {
+        if (typeof document !== "undefined" && document.fonts) {
+          await document.fonts.load('12px "JetBrains Mono"');
+        }
+      } catch {
+        // sem Font Loading API: seguimos com a fonte de fallback
+      }
+      if (disposed) return;
+
+      term = new XTerm({
+        theme: {
+          background: resolvedTheme === "dark" ? "#09090b" : "#ffffff",
+          foreground: resolvedTheme === "dark" ? "#f8fafc" : "#0f172a",
+          cursor: "#3b82f6",
+        },
+        fontSize: 12,
+        fontFamily: '"JetBrains Mono", monospace',
+        cursorBlink: true,
+      });
+
+      fitAddon = new FitAddon();
+      term.loadAddon(fitAddon);
+      term.open(terminalRef.current!);
+      fitAddon.fit();
+      xtermRef.current = term;
+
+      term.writeln(`\x1b[34m[*] Connecting to container shell (${shell})...\x1b[0m`);
+
+      // Send keystrokes to backend stdin
+      dataDispose = term.onData((data) => {
+        writeStdin(containerId, data).catch((e) => console.error("Error writing to stdin:", e));
+      });
+
       unlisten = await listen<string>(`exec-output-${containerId}`, (event) => {
-        term.write(event.payload);
+        term?.write(event.payload);
       });
 
       try {
@@ -1248,14 +1263,15 @@ const TerminalComponent = ({ containerId, shell, user }: { containerId: string; 
 
     setup();
 
-    const handleResize = () => fitAddon.fit();
+    const handleResize = () => fitAddon?.fit();
     window.addEventListener("resize", handleResize);
 
     return () => {
-      dataDispose.dispose();
+      disposed = true;
+      dataDispose?.dispose();
       if (unlisten) unlisten();
       window.removeEventListener("resize", handleResize);
-      term.dispose();
+      term?.dispose();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [containerId, shell, user]);

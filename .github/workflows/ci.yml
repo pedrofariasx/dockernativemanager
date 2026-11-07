@@ -68,3 +68,70 @@ jobs:
       - name: cargo test
         working-directory: src-tauri
         run: cargo test
+
+  linux-deb:
+    name: Linux (.deb in clean container)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v5
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          cache: "pnpm"
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install Linux dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libgtk-3-dev libwebkit2gtk-4.1-dev \
+            librsvg2-dev patchelf pkg-config fakeroot
+
+      - name: Install frontend dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build .deb
+        run: pnpm tauri build --bundles deb
+
+      - name: Verify deb contents and runtime linkage in clean container
+        run: |
+          set -euo pipefail
+          DEB="$(ls src-tauri/target/release/bundle/deb/*_amd64.deb)"
+          echo "Verifying $DEB"
+          docker run --rm -e DEB="$DEB" -v "$PWD:/work:ro" -w /work ubuntu:22.04 bash -c '
+            set -euo pipefail
+            apt-get update -qq
+            DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "./$DEB" >/dev/null
+            dpkg -s docker-native-manager | grep -E "^(Status|Version|Depends)"
+            test -x /usr/bin/docker-native-manager
+            DESKTOP="$(ls /usr/share/applications/*.desktop)"
+            test -n "$DESKTOP" && grep -q "docker-native-manager" "$DESKTOP"
+            test -n "$(ls /usr/share/icons/hicolor/128x128/apps/*.png 2>/dev/null)"
+            MISSING="$(ldd /usr/bin/docker-native-manager | grep "not found" || true)"
+            if [ -n "$MISSING" ]; then
+              echo "::error::deb Depends is incomplete, unresolved libraries:"; echo "$MISSING"; exit 1
+            fi
+            echo "OK: deb installs and resolves all runtime libraries"
+          '
+
+      - name: Check glibc compatibility floor
+        run: |
+          set -euo pipefail
+          # O .deb é distribuído via repositório APT, então o binário não pode exigir
+          # glibc mais novo que o do Ubuntu 22.04 (2.35), senão quebra em distros velhas.
+          BIN="src-tauri/target/release/docker-native-manager"
+          GLIBC_MAX="$(objdump -T "$BIN" | grep -o 'GLIBC_[0-9.]*' | sort -uV | tail -1)"
+          GLIBC_WORST="$(printf 'GLIBC_2.34\n%s\n' "$GLIBC_MAX" | sort -V | tail -1)"
+          echo "maior requisito de glibc: $GLIBC_MAX"
+          if [ "$GLIBC_WORST" != "GLIBC_2.34" ]; then
+            echo "::error::$GLIBC_MAX excede o piso (glibc 2.34: Ubuntu 22.04 / Debian 12)"
+            exit 1
+          fi
+          echo "OK: respeita o piso de glibc 2.34"

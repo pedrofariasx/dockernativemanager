@@ -87,18 +87,46 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build Tauri App
-        run: pnpm tauri build --bundles appimage,deb,rpm
+        run: |
+          set -euo pipefail
+          VERSION="$(jq -r .version src-tauri/tauri.conf.json)"
 
-      - name: Upload AppImage, deb, rpm to Release
+          if [[ "$VERSION" == *-* ]]; then
+            pnpm tauri build --bundles appimage,deb
+
+            # O Tauri exige semver na versão e o RPM não aceita '-' nela (é o
+            # separador do NEVRA). O `tauri bundle` reempacota o binário já
+            # compilado como versão 1.18.0 + release 0.beta.1, que ordena antes
+            # da 1.18.0 estável; o app instalado segue com a versão real.
+            RPM_CONFIG="$(jq -nc --arg v "${VERSION%%-*}" --arg r "0.${VERSION#*-}" \
+              '{version: $v, bundle: {linux: {rpm: {release: $r}}}}')"
+            pnpm tauri bundle --bundles rpm --config "$RPM_CONFIG"
+          else
+            pnpm tauri build --bundles appimage,deb,rpm
+          fi
+
+          # Nome no mesmo padrão dos outros pacotes; a versão do rpm fica nos metadados.
+          mv src-tauri/target/release/bundle/rpm/*.rpm \
+            "src-tauri/target/release/bundle/rpm/Docker.Native.Manager_${VERSION}_x86_64.rpm"
+
+      - name: Upload raw Linux binary, AppImage, deb, and rpm to Release
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           TAG="${{ needs.release.outputs.new_tag }}"
           BUNDLE_DIR="src-tauri/target/release/bundle"
 
+          gh release upload "$TAG" \
+            "src-tauri/target/release/docker-native-manager#docker-native-manager-linux-x86_64" \
+            --clobber
+
           for dir in appimage deb rpm; do
             for f in "$BUNDLE_DIR/$dir/"*; do
-              [ -f "$f" ] && gh release upload "$TAG" "$f" --clobber
+              # o glob não casa quando o diretório não existe.
+              # com `bash -e`, um teste falso abortaria o passo.
+              if [ -f "$f" ]; then
+                gh release upload "$TAG" "$f" --clobber
+              fi
             done
           done
 

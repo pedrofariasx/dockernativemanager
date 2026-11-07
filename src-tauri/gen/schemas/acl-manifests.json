@@ -55,6 +55,11 @@
         "description": "Enables the default_window_icon command without any pre-configured scope.",
         "commands": { "allow": ["default_window_icon"], "deny": [] }
       },
+      "allow-exit": {
+        "identifier": "allow-exit",
+        "description": "Enables the exit command without any pre-configured scope.",
+        "commands": { "allow": ["exit"], "deny": [] }
+      },
       "allow-fetch-data-store-identifiers": {
         "identifier": "allow-fetch-data-store-identifiers",
         "description": "Enables the fetch_data_store_identifiers command without any pre-configured scope.",
@@ -129,6 +134,11 @@
         "identifier": "deny-default-window-icon",
         "description": "Denies the default_window_icon command without any pre-configured scope.",
         "commands": { "allow": [], "deny": ["default_window_icon"] }
+      },
+      "deny-exit": {
+        "identifier": "deny-exit",
+        "description": "Denies the exit command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["exit"] }
       },
       "deny-fetch-data-store-identifiers": {
         "identifier": "deny-fetch-data-store-identifiers",
@@ -1307,6 +1317,11 @@
         "description": "Enables the set_fullscreen command without any pre-configured scope.",
         "commands": { "allow": ["set_fullscreen"], "deny": [] }
       },
+      "allow-set-fullscreen-on-monitor": {
+        "identifier": "allow-set-fullscreen-on-monitor",
+        "description": "Enables the set_fullscreen_on_monitor command without any pre-configured scope.",
+        "commands": { "allow": ["set_fullscreen_on_monitor"], "deny": [] }
+      },
       "allow-set-icon": {
         "identifier": "allow-set-icon",
         "description": "Enables the set_icon command without any pre-configured scope.",
@@ -1696,6 +1711,11 @@
         "identifier": "deny-set-fullscreen",
         "description": "Denies the set_fullscreen command without any pre-configured scope.",
         "commands": { "allow": [], "deny": ["set_fullscreen"] }
+      },
+      "deny-set-fullscreen-on-monitor": {
+        "identifier": "deny-set-fullscreen-on-monitor",
+        "description": "Denies the set_fullscreen_on_monitor command without any pre-configured scope.",
+        "commands": { "allow": [], "deny": ["set_fullscreen_on_monitor"] }
       },
       "deny-set-icon": {
         "identifier": "deny-set-icon",
@@ -2741,43 +2761,6 @@
         "description": "This scope permits recursive access to the complete `$VIDEO` folder, including sub directories and files.",
         "commands": { "allow": [], "deny": [] },
         "scope": { "allow": [{ "path": "$VIDEO" }, { "path": "$VIDEO/**" }] }
-      },
-      "write-all": {
-        "identifier": "write-all",
-        "description": "This enables all write related commands without any pre-configured accessible paths.",
-        "commands": {
-          "allow": [
-            "mkdir",
-            "create",
-            "copy_file",
-            "remove",
-            "rename",
-            "truncate",
-            "ftruncate",
-            "write",
-            "write_file",
-            "write_text_file"
-          ],
-          "deny": []
-        }
-      },
-      "write-files": {
-        "identifier": "write-files",
-        "description": "This enables all file write related commands without any pre-configured accessible paths.",
-        "commands": {
-          "allow": [
-            "create",
-            "copy_file",
-            "remove",
-            "rename",
-            "truncate",
-            "ftruncate",
-            "write",
-            "write_file",
-            "write_text_file"
-          ],
-          "deny": []
-        }
       }
     },
     "permission_sets": {
@@ -3552,6 +3535,37 @@
           "allow-read-text-file-lines-next",
           "allow-exists",
           "scope-app-recursive"
+        ]
+      },
+      "write-all": {
+        "identifier": "write-all",
+        "description": "This enables all write related commands without any pre-configured accessible paths.",
+        "permissions": [
+          "allow-mkdir",
+          "allow-create",
+          "allow-copy-file",
+          "allow-remove",
+          "allow-rename",
+          "allow-truncate",
+          "allow-ftruncate",
+          "allow-write",
+          "allow-write-file",
+          "allow-write-text-file"
+        ]
+      },
+      "write-files": {
+        "identifier": "write-files",
+        "description": "This enables all file write related commands without any pre-configured accessible paths.",
+        "permissions": [
+          "allow-create",
+          "allow-copy-file",
+          "allow-remove",
+          "allow-rename",
+          "allow-truncate",
+          "allow-ftruncate",
+          "allow-write",
+          "allow-write-file",
+          "allow-write-text-file"
         ]
       }
     },

@@ -19,7 +19,6 @@ import {
   Layers,
   Database,
   Network as NetworkIcon,
-  Circle,
   Trash,
   Eraser,
   Loader2,
@@ -28,7 +27,6 @@ import {
   Disc2,
   Container,
   EraserIcon,
-  Play,
   Square as SquareIcon,
   RotateCw,
   Waypoints,
@@ -80,6 +78,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import ReactMarkdown from "react-markdown";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { ChevronDown, ChevronUp } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import DaemonStatusPill from "./DaemonStatusPill";
 
 const navItems = [
   { name: "Dashboard", path: "/", icon: LayoutDashboard },
@@ -93,9 +99,8 @@ const navItems = [
 
 const Sidebar = () => {
   const location = useLocation();
-  const { isConnected, manageService } = useDocker();
+  const { isConnected, daemonState, isManagingService, manageService } = useDocker();
   const [isPruning, setIsPruning] = useState(false);
-  const [isManagingService, setIsManagingService] = useState(false);
   const [showPruneDialog, setShowPruneDialog] = useState(false);
   const [showClusterSettings, setShowClusterSettings] = useState(false);
   const [appVersion, setAppVersion] = useState<string>("");
@@ -385,15 +390,6 @@ const Sidebar = () => {
     }
   };
 
-  const handleServiceAction = async (action: "start" | "stop" | "restart") => {
-    setIsManagingService(true);
-    try {
-      await manageService(action);
-    } finally {
-      setIsManagingService(false);
-    }
-  };
-
   return (
     <>
       <div className="w-64 border-r bg-sidebar text-sidebar-foreground flex flex-col h-full shrink-0">
@@ -448,91 +444,52 @@ const Sidebar = () => {
             <span className="text-sm font-medium">System Prune</span>
           </Button>
 
-          <div className="bg-sidebar-accent/50 rounded-lg p-3 flex flex-col gap-3">
-            <div className="flex items-center gap-3">
-              {isManagingService && !isConnected ? (
-                <Loader2 className="w-3 h-3 animate-spin text-amber-500" />
-              ) : (
-                <Circle
-                  className={cn(
-                    "w-3 h-3 animate-pulse",
-                    isConnected ? "text-emerald-500 fill-emerald-500" : "text-rose-500 fill-rose-500",
-                  )}
-                />
-              )}
-              <div className="flex-1 overflow-hidden">
-                <p className="text-xs text-sidebar-foreground font-medium">Daemon Status</p>
-                <div className="flex items-center gap-1 overflow-hidden">
-                  <p
-                    className={cn(
-                      "text-[10px] truncate font-semibold transition-colors shrink-0",
-                      isManagingService && !isConnected
-                        ? "text-amber-500"
-                        : isConnected
-                          ? "text-emerald-500"
-                          : "text-rose-500",
-                    )}
-                  >
-                    {isManagingService && !isConnected ? "Connecting..." : isConnected ? "Connected" : "Disconnected"}
-                  </p>
-                  {isConnected && contexts.find((c) => c.is_active) && (
-                    <>
-                      <span className="text-[8px] text-muted-foreground">•</span>
-                      <span className="text-[10px] text-primary font-bold truncate">
-                        {contexts.find((c) => c.is_active)?.name}
-                      </span>
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2">
-              {isConnected ? (
-                <>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-7 w-7 bg-background/50 hover:bg-rose-500/20 hover:text-rose-500"
-                    onClick={() => handleServiceAction("stop")}
-                    disabled={isManagingService}
-                    title="Stop Docker Service"
-                  >
-                    <SquareIcon className="w-3.5 h-3.5" />
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    size="icon"
-                    className="h-7 w-7 bg-background/50 hover:bg-amber-500/20 hover:text-amber-500"
-                    onClick={() => handleServiceAction("restart")}
-                    disabled={isManagingService}
-                    title="Restart Docker Service"
-                  >
-                    <RotateCw className={cn("w-3.5 h-3.5", isManagingService && "animate-spin")} />
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  className="h-7 flex-1 gap-2 bg-emerald-500/10 text-emerald-500 hover:bg-emerald-500/20 border border-emerald-500/20"
-                  onClick={() => handleServiceAction("start")}
-                  disabled={isManagingService}
-                >
-                  <Play className="w-3.5 h-3.5" />
-                  <span className="text-[10px] font-bold uppercase">Start Daemon</span>
-                </Button>
-              )}
-              <Button
-                variant="secondary"
-                size="icon"
-                className="h-7 w-7 bg-background/50 hover:bg-primary/20 hover:text-primary ml-auto shrink-0"
-                onClick={() => setShowClusterSettings(true)}
-                title="Cluster Configuration"
+          <div className="pt-3 border-t border-sidebar-border">
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                className="group w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-left transition-colors hover:bg-sidebar-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+                title="Daemon options"
               >
-                <Settings2 className="w-3.5 h-3.5" />
-              </Button>
-            </div>
+                <DaemonStatusPill
+                  state={daemonState}
+                  contextName={isConnected ? contexts.find((c) => c.is_active)?.name : undefined}
+                />
+                <ChevronUp
+                  aria-hidden="true"
+                  className="w-3.5 h-3.5 ml-auto shrink-0 text-muted-foreground opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity"
+                />
+              </DropdownMenuTrigger>
+              <DropdownMenuContent side="top" align="start" className="w-56 bg-card border-border">
+                {isConnected && (
+                  <>
+                    <DropdownMenuItem
+                      className="hover:bg-muted focus:bg-muted cursor-pointer"
+                      onClick={() => manageService("stop")}
+                      disabled={isManagingService}
+                    >
+                      <SquareIcon className="mr-2 h-4 w-4 text-rose-500" />
+                      <span>Stop daemon</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      className="hover:bg-muted focus:bg-muted cursor-pointer"
+                      onClick={() => manageService("restart")}
+                      disabled={isManagingService}
+                    >
+                      <RotateCw className="mr-2 h-4 w-4 text-amber-500" />
+                      <span>Restart daemon</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator className="bg-border" />
+                  </>
+                )}
+                <DropdownMenuItem
+                  className="hover:bg-muted focus:bg-muted cursor-pointer"
+                  onClick={() => setShowClusterSettings(true)}
+                >
+                  <Settings2 className="mr-2 h-4 w-4 text-primary" />
+                  <span>Cluster configuration</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
