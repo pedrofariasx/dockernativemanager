@@ -1,3 +1,10 @@
+# [1.18.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.18.0-beta.1...v1.18.0-beta.2) (2026-11-07)
+
+
+### Bug Fixes
+
+* resolve oxlint async reassignment errors ([9f0adc7](https://github.com/pedrofariasx/dockernativemanager/commit/9f0adc743b94684f09f4d08cd6a16b8d28f964a7))
+
 # [1.18.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0...v1.18.0-beta.1) (2026-11-06)
 
 
