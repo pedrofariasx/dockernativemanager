@@ -83,7 +83,7 @@
     "oxlint": "^1.93.0",
     "postcss": "^8.5.32",
     "prettier": "^3.10.1",
-    "semantic-release": "^25.0.9",
+    "semantic-release": "^26.0.1",
     "tailwindcss": "^3.4.19",
     "typescript": "^7.0.2",
     "vite": "^8.3.8",
