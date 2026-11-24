@@ -43,7 +43,7 @@ Log out and back in (or restart your VM, if you're using one) for the change to 
 
 ### Prerequisites
 
-- Node.js (`v20` or higher recommended)
+- Node.js `v26`
 - `pnpm` (Package manager)
 - Rust (latest stable version)
 - Docker Desktop or Docker Engine running locally
