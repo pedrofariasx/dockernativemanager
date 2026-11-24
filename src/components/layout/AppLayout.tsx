@@ -104,9 +104,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
   }, [pathname]);
 
   useEffect(() => {
-    let unlisten: () => void;
-
-    const setupListener = async () => {
+    const unlistenPromise = (async () => {
       const win = getCurrentWindow();
 
       const updateMaximized = async () => {
@@ -127,12 +125,13 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         await updateMaximized();
       });
 
-      unlisten = unlistenResized;
-    };
+      return unlistenResized;
+    })();
 
-    setupListener();
     return () => {
-      if (unlisten) unlisten();
+      void unlistenPromise.then((unlisten) => {
+        unlisten();
+      });
     };
   }, []);
 
@@ -161,7 +160,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
         {/* Full Header Drag Handle */}
         <div
           className="h-12 border-b border-border/50 bg-background/50 flex items-center justify-between px-4 select-none shrink-0 cursor-default backdrop-blur-md"
-          onPointerDown={async (e) => {
+          onPointerDown={(e) => {
             if (e.button !== 0 || (e.target as HTMLElement).closest("button") !== null) return;
 
             const now = Date.now();
@@ -169,7 +168,7 @@ const AppLayout = ({ children }: { children: React.ReactNode }) => {
             lastPointerRef.current = now;
 
             if (isDouble) {
-              await getCurrentWindow()[isMaximized ? "unmaximize" : "maximize"]();
+              void getCurrentWindow()[isMaximized ? "unmaximize" : "maximize"]();
               return;
             }
 

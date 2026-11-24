@@ -1,36 +1,36 @@
-## [1.18.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.18.0...v1.18.1) (2026-11-07)
+# [1.19.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.18.1...v1.19.0-beta.1) (2026-11-24)
 
 
 ### Bug Fixes
 
-* **sidebar:** restore start daemon action ([132aad9](https://github.com/pedrofariasx/dockernativemanager/commit/132aad9875f112193c7695f24ede9efb8df9e859))
-
-# [1.18.0](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0...v1.18.0) (2026-11-07)
-
-
-### Bug Fixes
-
-* align tauri plugin fs versions across rust and npm ([e9f6bd6](https://github.com/pedrofariasx/dockernativemanager/commit/e9f6bd6008d8e7c653ac058e46f9363ca300e961))
-* apt repo deb glob and gpg signing without tty ([4fef260](https://github.com/pedrofariasx/dockernativemanager/commit/4fef260c123fede4b5511cceb4441942a709b71a))
-* correct pre-release version build and bump pnpm to 11.28.11 ([10f582a](https://github.com/pedrofariasx/dockernativemanager/commit/10f582a5e753e9bc89323a8f65b916c5d2b2795e))
-* **dashboard:** corrigir estados de carregamento ao iniciar e parar o daemon ([edf8240](https://github.com/pedrofariasx/dockernativemanager/commit/edf824034af02f0369ef9d1064f3d0999b175230))
-* **dashboard:** manter Docker isnt running ate o daemon responder ([3094717](https://github.com/pedrofariasx/dockernativemanager/commit/30947175798e4f367bf13f14b3ff36cf25e6cbe6))
-* do not build rpm for prerelease versions ([5536b50](https://github.com/pedrofariasx/dockernativemanager/commit/5536b509aa2966f5dc08d4a704ea36a0853a436f))
-* do not fail the upload step when a bundle format is missing ([f47a421](https://github.com/pedrofariasx/dockernativemanager/commit/f47a421d9c5189eb41af933021332cd65f6ae6e9))
-* gera versao de pre-release rpm sem quebrar versao do tauri ([21c320e](https://github.com/pedrofariasx/dockernativemanager/commit/21c320e7486a60a898ae36f9669500d62326d612))
-* include install.sh in the dry-run repository preview ([ff6a494](https://github.com/pedrofariasx/dockernativemanager/commit/ff6a494e87d9524a105c57ff84caa4c8f92f573f))
-* normalize prerelease bundle version for rpm builds ([b1af52a](https://github.com/pedrofariasx/dockernativemanager/commit/b1af52a25d584c7277c6f444eb1d6672755bc2e1))
-* only use gpg loopback when a passphrase is provided ([e3acb70](https://github.com/pedrofariasx/dockernativemanager/commit/e3acb708415a7632ce0220e27fafd1d10c4fef9e))
-* publish before checking pages and report the 403 honestly ([19d614a](https://github.com/pedrofariasx/dockernativemanager/commit/19d614af7eb7c2d16f928f81074414a9167db098))
-* restore apt-repo job structure broken by misplaced env block ([b23eb30](https://github.com/pedrofariasx/dockernativemanager/commit/b23eb3079bd372438116fe975eea677b3b82e28d))
+* **deps:** restore pnpm 11.28.13 ([fe26b9a](https://github.com/pedrofariasx/dockernativemanager/commit/fe26b9a0d88e9d1615c71fb31ff42febb77501d5))
+* resolve oxlint async reassignment errors ([9f0adc7](https://github.com/pedrofariasx/dockernativemanager/commit/9f0adc743b94684f09f4d08cd6a16b8d28f964a7))
+* **ui:** melhorar contraste das checkboxes no hover ([d1b06e2](https://github.com/pedrofariasx/dockernativemanager/commit/d1b06e27ee559d375ce45f3ed9a2268f159232b7))
 
 
 ### Features
 
-* add one-line installer script for the apt repository ([4878dab](https://github.com/pedrofariasx/dockernativemanager/commit/4878dab337e1543a999324858c8d5e45bc3af752)), closes [#pages](https://github.com/pedrofariasx/dockernativemanager/issues/pages)
-* atualiza imagem do readme para nova barra lateral de status ([9423268](https://github.com/pedrofariasx/dockernativemanager/commit/942326830fcdd2ce9ad9a3c548810d892e42f5cf))
-* bundle Plus Jakarta Sans and JetBrains Mono as the app typography ([ba911e8](https://github.com/pedrofariasx/dockernativemanager/commit/ba911e8e80d3ccb12c188f8f14bc86abd4da624d))
-* **dashboard:** simplificar estado de daemon e melhorias na tela inicial ([8b45cde](https://github.com/pedrofariasx/dockernativemanager/commit/8b45cde873874b91f09503d3b5f2677a8c03713b))
+* atualiza para o node 26 ([9658718](https://github.com/pedrofariasx/dockernativemanager/commit/9658718b12d0bcfbe9dea0aad0e4783f20babc07))
+
+# [1.18.0-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.18.0-beta.2...v1.18.0-beta.3) (2026-11-23)
+
+
+### Bug Fixes
+
+* **deps:** restore pnpm 11.28.13 ([fe26b9a](https://github.com/pedrofariasx/dockernativemanager/commit/fe26b9a0d88e9d1615c71fb31ff42febb77501d5))
+* **ui:** melhorar contraste das checkboxes no hover ([d1b06e2](https://github.com/pedrofariasx/dockernativemanager/commit/d1b06e27ee559d375ce45f3ed9a2268f159232b7))
+
+
+### Features
+
+* atualiza para o node 26 ([9658718](https://github.com/pedrofariasx/dockernativemanager/commit/9658718b12d0bcfbe9dea0aad0e4783f20babc07))
+
+# [1.18.0-beta.2](https://github.com/pedrofariasx/dockernativemanager/compare/v1.18.0-beta.1...v1.18.0-beta.2) (2026-11-07)
+
+
+### Bug Fixes
+
+* resolve oxlint async reassignment errors ([9f0adc7](https://github.com/pedrofariasx/dockernativemanager/commit/9f0adc743b94684f09f4d08cd6a16b8d28f964a7))
 
 # [1.18.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.17.0...v1.18.0-beta.1) (2026-11-06)
 

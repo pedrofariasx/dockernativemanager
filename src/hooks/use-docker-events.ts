@@ -19,19 +19,19 @@ export function useDockerEvent(
   callback: (event?: DockerEventPayload) => void,
 ) {
   useEffect(() => {
-    let unlisten: (() => void) | undefined;
+    const unlistenPromise = listen<DockerEventPayload>("docker-event", (event) => {
+      if (type === "all" || event.payload.Type === type) {
+        callback(event.payload);
+      }
+    }).catch((e) => {
+      console.error("Error setting up docker event listener:", e);
+      return undefined;
+    });
 
-    const setup = async () => {
-      unlisten = await listen<DockerEventPayload>("docker-event", (event) => {
-        if (type === "all" || event.payload.Type === type) {
-          callback(event.payload);
-        }
-      });
-    };
-
-    setup().catch((e) => console.error("Error setting up docker event listener:", e));
     return () => {
-      if (unlisten) unlisten();
+      void unlistenPromise.then((unlisten) => {
+        unlisten?.();
+      });
     };
   }, [type, callback]);
 }
