@@ -1,3 +1,17 @@
+# [1.19.0-beta.1](https://github.com/pedrofariasx/dockernativemanager/compare/v1.18.1...v1.19.0-beta.1) (2026-11-24)
+
+
+### Bug Fixes
+
+* **deps:** restore pnpm 11.28.13 ([fe26b9a](https://github.com/pedrofariasx/dockernativemanager/commit/fe26b9a0d88e9d1615c71fb31ff42febb77501d5))
+* resolve oxlint async reassignment errors ([9f0adc7](https://github.com/pedrofariasx/dockernativemanager/commit/9f0adc743b94684f09f4d08cd6a16b8d28f964a7))
+* **ui:** melhorar contraste das checkboxes no hover ([d1b06e2](https://github.com/pedrofariasx/dockernativemanager/commit/d1b06e27ee559d375ce45f3ed9a2268f159232b7))
+
+
+### Features
+
+* atualiza para o node 26 ([9658718](https://github.com/pedrofariasx/dockernativemanager/commit/9658718b12d0bcfbe9dea0aad0e4783f20babc07))
+
 # [1.18.0-beta.3](https://github.com/pedrofariasx/dockernativemanager/compare/v1.18.0-beta.2...v1.18.0-beta.3) (2026-11-23)
 
 
