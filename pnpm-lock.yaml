@@ -96,8 +96,8 @@ importers:
         specifier: ^0.4.6
         version: 0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       pnpm:
-        specifier: ^11.28.13
-        version: 11.28.13
+        specifier: ^11.29.0
+        version: 11.29.0
       react:
         specifier: ^19.3.1
         version: 19.3.1
@@ -3025,8 +3025,8 @@ packages:
     resolution: {integrity: sha512-C+VUP+8jis7EsQZIhDYmS5qlNtjv2yP4SNtjXK9AP1ZcTRlnSfuumaTnRfYZnYgUUYVIKqL0fRvmUGDV2fmp6g==}
     engines: {node: '>=4'}
 
-  pnpm@11.28.13:
-    resolution: {integrity: sha512-1cqpzc1gZ6wpAvn0TaoAsSiKc7q/Hpj083Wzp1g7GJS01J91J9qPXhUwGYuxDgOtujIaHwFUKdwpRs6KepqMZQ==}
+  pnpm@11.29.0:
+    resolution: {integrity: sha512-2RP5s3zV/meABS6Al3Ttq7e9z2mm5tm4/Ts4vAUvqKfYkbbCAaOPtQSgf/zi5ejCYu9U+49X22LyLTU6MLyKlg==}
     engines: {node: '>=22.13'}
     hasBin: true
 
@@ -6582,7 +6582,7 @@ snapshots:
       find-up: 2.1.0
       load-json-file: 4.0.0
 
-  pnpm@11.28.13: {}
+  pnpm@11.29.0: {}
 
   postcss-import@15.1.0(postcss@8.5.33):
     dependencies:
