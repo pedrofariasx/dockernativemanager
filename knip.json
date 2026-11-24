@@ -1,0 +1,7 @@
+{
+  "$schema": "https://unpkg.com/knip@latest/schema.json",
+  "entry": ["index.html", "src/**/*.{test,spec}.{ts,tsx}", "*.config.{js,ts}", "scripts/**/*.js", ".releaserc.json"],
+  "exclude": ["exports", "types"],
+  "ignore": ["public/skeleton.css"],
+  "ignoreDependencies": ["@semantic-release/commit-analyzer", "@semantic-release/release-notes-generator"]
+}
